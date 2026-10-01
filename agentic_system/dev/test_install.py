@@ -4,8 +4,10 @@ sys.path.append("./")  # Add the parent directory to the Python path
 sys.path.append("../")  # Add the parent directory to the Python path
 sys.path.append("../../")  # Add the parent directory to the Python path
 
-from langchain.agents import create_agent
-from langchain.agents.structured_output import ToolStrategy
+#from langchain.agents import create_agent
+#from langchain.agents.structured_output import ToolStrategy
+
+from agentic_system.common.langchain_imports import *
 
 from agentic_system.common.get_llm import azure_llm_if 
 from agentic_system.common import * 
@@ -29,7 +31,7 @@ R: An apple is a sweet, edible fruit produced by an apple tree (Malus domestica)
 query="what is an apple?"
 agent = create_agent(model=azure_llm_if(), system_prompt=prompt)
 
-RUN_AGENT = False  
+RUN_AGENT = True  
 if RUN_AGENT:
     response = agent.invoke({
                 "messages": [
