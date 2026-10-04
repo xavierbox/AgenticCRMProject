@@ -108,11 +108,11 @@ def get_data_analyst_as_structured_tool() -> StructuredTool:
     description = analyst.description 
 
     # Create the executable wrapper function on the fly
-    def wrapper_analyst(query: str, task_result_ids: list[str] | None = None) -> str:
+    def wrapper_analyst(query: str, task_result_ids: list[str] | None = None):# -> str:
         
         context = analyst.build_context_from_task_ids(task_result_ids)
         task_result = analyst.run(query,context=context)
-        return task_result.cheap_output or "No output produced."
+        return task_result#.cheap_output or "No output produced."
 
 
     tool = StructuredTool.from_function(

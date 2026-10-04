@@ -193,7 +193,7 @@ def get_planner_as_structured_tool() -> StructuredTool:
     description = planner.description 
 
     # Create the executable wrapper function on the fly
-    def wrapper_func(query: str) -> str:
+    def wrapper_func(query: str) :
         return planner.run(query)
 
     tool = StructuredTool.from_function(

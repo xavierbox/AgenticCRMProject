@@ -8,6 +8,18 @@ from pydantic import BaseModel, Field
 
 from pydantic import BaseModel, Field
 
+class TextResult(BaseModel):
+    text: str
+    role: str = "answer"
+
+class DataFrameResult(BaseModel):
+    table_name: str
+    description: str | None = None
+    #dataframe: Any
+    records: Any 
+
+
+
 class TaskResult(BaseModel):
     """
     Output produced by one executed task.
@@ -47,7 +59,7 @@ class TaskResult(BaseModel):
         ),
     )
 
-    data_results: list[Any] = Field(
+    data_results: list[TextResult|DataFrameResult] = Field(
         default_factory=list,
         description=(
             "Materialized downstream-friendly objects, such as DataFrames, "
@@ -56,14 +68,13 @@ class TaskResult(BaseModel):
         ),
     )
 
-class TextResult(BaseModel):
-    text: str
-    role: str = "answer"
 
-class DataFrameResult(BaseModel):
-    table_name: str
-    description: str | None = None
-    dataframe: Any
+
+ 
+
+
+
+
 
 class BaseSystemTask(BaseModel):
     instruction: str = Field(
