@@ -736,7 +736,7 @@ class ResultsInterpreterComponent:
          
 
 
-        return template.format(
+        return template.format( # type: ignore
             definitions=format_list(
                 semantic_context.definitions
             ),

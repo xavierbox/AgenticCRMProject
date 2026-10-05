@@ -69,8 +69,21 @@ class TaskResult(BaseModel):
     )
 
  
+class TableItemAgentResponse(BaseModel):
+    table_name: str = Field(description="Name of a materialized output table")
+    description: str = Field(description="Brief summary of the table contents")
+ 
+class AgentTableResponse(BaseModel):
+    # Literal ensures the LLM chooses only these specific strings
+    agent: Literal["analyst"] = Field(
+        default="analyst", 
+        description="The role of the agent. Always 'analyst'."
+    )
 
+    clarification: Optional[str] = Field(default=None, description="A follow-up question if the response_type is 'question'")
 
+    user_query: str = Field( description='sanitized user query')
+    tables: List[TableItemAgentResponse] = Field(default=[], description="Comma-separated list of table names")
 
 
 
