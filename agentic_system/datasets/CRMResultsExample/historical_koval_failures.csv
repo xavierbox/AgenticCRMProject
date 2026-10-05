@@ -1,0 +1,19 @@
+PRODUCER,MESSAGE
+BG-2031_P,"fit Model failed during fit stage:  Found array with 0 sample(s) (shape=(0,)) while a minimum of 1 is required."
+BG-1949_P,preprocessModel failed during preprocess stage:  Not enough data of water production to train the model. P:BG-1949_P
+BG-2204_P,preprocessModel failed during preprocess stage:  Not enough data of water production to train the model. P:BG-2204_P
+BG-2246_P,preprocessModel failed during preprocess stage:  Not enough data of water production to train the model. P:BG-2246_P
+BG-2243_P,"fit Model failed during fit stage:  Found array with 0 sample(s) (shape=(0,)) while a minimum of 1 is required."
+BG-2245_P,"fit Model failed during fit stage:  Found array with 0 sample(s) (shape=(0,)) while a minimum of 1 is required."
+BG-2096_P,"fit Model failed during fit stage:  Found array with 0 sample(s) (shape=(0,)) while a minimum of 1 is required."
+BG-1817_P,preprocessModel failed during preprocess stage:  Not enough data of water production to train the model. P:BG-1817_P
+BG-2202_P,preprocessModel failed during preprocess stage:  Not enough data of water production to train the model. P:BG-2202_P
+BG-0908_P,preprocessModel failed during preprocess stage:  Not enough data of water production to train the model. P:BG-0908_P
+BG-2086_P,preprocessModel failed during preprocess stage:  Not enough data of water production to train the model. P:BG-2086_P
+BG-2094_P,preprocessModel failed during preprocess stage:  Not enough data of water production to train the model. P:BG-2094_P
+BG-2090_P,preprocessModel failed during preprocess stage:  Not enough data of water production to train the model. P:BG-2090_P
+BG-2089_P,"fit Model failed during fit stage:  Found array with 0 sample(s) (shape=(0,)) while a minimum of 1 is required."
+BG-1938_P,"fit Model failed during fit stage:  Found array with 0 sample(s) (shape=(0,)) while a minimum of 1 is required."
+BG-2085_P,preprocessModel failed during preprocess stage:  Not enough data of water production to train the model. P:BG-2085_P
+BG-2080_P,"fit Model failed during fit stage:  Found array with 0 sample(s) (shape=(0,)) while a minimum of 1 is required."
+BG-1813_P,"fit Model failed during fit stage:  Found array with 0 sample(s) (shape=(0,)) while a minimum of 1 is required."

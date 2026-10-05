@@ -1,6 +1,7 @@
 
 import inspect
 import sys
+
 sys.path.append("./")  # Add the parent directory to the Python path
 sys.path.append("../")  # Add the parent directory to the Python path
 sys.path.append("../../")  # Add the parent directory to the Python path
@@ -10,6 +11,7 @@ from langchain_core.tools import StructuredTool
 
 from agentic_system.common.base_task import TaskExecutionContext, TaskResult, TextResult
 from agentic_system.common.get_llm import azure_llm_if
+from agentic_system.components.results_interpreter.semantic_context import ResultsInterpreterSemanticContext
 
 
 from langchain.agents import create_agent
@@ -532,8 +534,7 @@ class ResultsInterpreterComponent:
 
         return None 
 
-
-    def _build_system_prompt(self)->str:
+    def _old_build_system_prompt(self)->str:
 
         metadata = self.data_component.metadata
 
@@ -697,8 +698,62 @@ class ResultsInterpreterComponent:
         else:
             raise NotImplementedError("Only no-memory and no structured-output in this version")
     
+    def _build_system_prompt(self,
+        #template: str,
+        #semantic_catalog: SemanticCatalog,
+        #semantic_context: ResultsInterpreterSemanticContext,
+    ) -> str:
 
-                         
+        def format_list(items: list[str]) -> str:
+            if not items:
+                return "- None"
+            return "\n".join(f"- {item}" for item in items)
+
+        def format_table_catalog(catalog: SemanticCatalog) -> str:
+            sections = []
+
+            for table in catalog.tables:
+                lines = [
+                    f"## {table.name}",
+                    table.description,
+                    "",
+                    "Columns:",
+                ]
+
+                for column in table.columns:
+                    description = column.description or ""
+                    lines.append(
+                        f"- {column.name} ({column.data_type}): {description}"
+                    )
+
+                sections.append("\n".join(lines))
+
+            return "\n\n".join(sections)
+
+        template  = self.config.prompt_template
+        semantic_catalog = self.data_component.metadata['semantic_catalog'] # type: ignore
+        semantic_context = self.data_component.metadata['semantic_context'] # type: ignore
+         
+
+
+        return template.format(
+            definitions=format_list(
+                semantic_context.definitions
+            ),
+            business_rules=format_list(
+                semantic_context.business_rules
+            ),
+            domain_knowledge=format_list(
+                semantic_context.domain_knowledge
+            ),
+            interpretation_guidelines=format_list(
+                semantic_context.interpretation_guidelines
+            ),
+            table_catalog=format_table_catalog(
+                semantic_catalog
+            ),
+        )
+                    
     def run(
         self,
         query: str,
@@ -713,7 +768,12 @@ class ResultsInterpreterComponent:
         #    "These results confirm a good connectivity between wells."
         #)
 
-        prompt = self._build_system_prompt()
+        
+
+        prompt = self._build_system_prompt( )
+        #depends on prompt_template, semantic_catalog,semantic_context) 
+
+        #pprint.pprint( prompt )
       
         llm_messages = [
                    {"role": "system", "content": prompt},
@@ -748,7 +808,7 @@ class ResultsInterpreterComponent:
             }
         )
         text_answer = response['messages'][-1].content
-        print( type(response), text_answer )
+        #print( type(response), text_answer )
         
         #response = self.llm.invoke(llm_messages)
         #answer = response.content
@@ -820,18 +880,18 @@ def prepare_test_data( ) :
     3	I1	P2	0.463442	0.4    meaningful
     4	I3	P2	0.226982	0.15   meaningful
     """
-    q="""	PRODUCER	CORRELATION	VARIANCE_RATIO	QUALITY_SCORE	QUALITY_CLASS
+    q = """	PRODUCER	CORRELATION	VARIANCE_RATIO	QUALITY_SCORE	QUALITY_CLASS
     0	P1	0.802377	0.929430	0.864767	good
     1	P2	0.929300	1.324738	0.886701	good
     2	P3	0.754035	1.020565	0.833949	good
     3	P4	0.925126	1.205418	0.917859	good
     """
-    p="""
-    PRODUCER  current_produced_water_fraction  current_produced_oil_fraction  current_volume_liquid_produced  current_liquid_production_due_to_depletion  current_liquid_production_due_to_injection  current_liquid_production_due_to_pressure  pressure_coefficient  total_allocation  number_supporting_injectors
-    0   P1                             0.72                           0.28                          1200.0                               420.0                              660.0                              120.0                  0.18              0.55                           2
-    1   P2                             0.35                           0.65                           950.0                               570.0                              285.0                               95.0                  0.10              0.30                           2
-    2   P3                             0.88                           0.12                           700.0                               140.0                              490.0                               70.0                  0.22              0.70                           1
-    3   P4                             0.20                           0.80                          1500.0                              1050.0                              300.0                              150.0                  0.08              0.20                           0
+    p = """
+    PRODUCER  current_produced_water_fraction  current_produced_oil_fraction  current_volume_liquid_produced  current_liquid_production_due_to_depletion  current_liquid_production_due_to_injection  current_liquid_production_due_to_pressure  pressure_coefficient  total_allocation  number_supporting_injectors  TAU  TAUP  LO
+    0   P1    0.72  0.28  1200.0  420.0   660.0  120.0  0.18  0.55  2  4.5   120.0  0.35
+    1   P2    0.35  0.65   950.0  570.0   285.0   95.0  0.10  0.30  2  12.0  240.0  0.60
+    2   P3    0.88  0.12   700.0  140.0   490.0   70.0  0.22  0.70  1  1.4   450.0  0.20
+    3   P4    0.20  0.80  1500.0  1050.0  300.0  150.0  0.08  0.20  0  28.0  800.0  0.75
     """
 
 
@@ -957,7 +1017,7 @@ def prepare_test_data( ) :
                 row_count=len(producer_model_table),
                 columns=[
                     ColumnCard(
-                        name="PROCER",
+                        name="PRODUCER",
                         data_type="string",
                         description="Producer well name."
                     ),
@@ -1031,7 +1091,7 @@ def prepare_test_data( ) :
     )
 
 
-    semantic_context = SemanticContext(
+    semantic_context = ResultsInterpreterSemanticContext(
 
         definitions=[
             (
@@ -1074,6 +1134,50 @@ def prepare_test_data( ) :
                 "production attributable to all modeled injectors combined."
             ),
         ],
+    
+        interpretation_guidelines= [
+            "Do not simply repeat table values. Identify patterns, extremes, rankings, anomalies and combinations of metrics that provide useful interpretation.",
+            
+            "Distinguish between direct observations, model interpretations and diagnostic hypotheses. Do not present a hypothesis as a confirmed physical mechanism.",
+            
+            "For injector-focused questions, examine GAIN, injector utility, number of supported producers and the distribution of connectivity across producers.",
+            "For producer-support questions, examine number_supporting_injectors, total_allocation, PALLOCATION and the modeled injection-production contribution.",
+            
+            "A highly connected injector-producer relationship is characterized primarily by high GAIN.",
+            
+            "A fast-response relationship is characterized by low TAU.",
+            
+            "High GAIN together with low TAU should be highlighted as a strong and fast connection and may be flagged as a potential channeling candidate.",
+            
+            "Do not diagnose channeling solely from high GAIN or solely from low TAU. Prefer conclusions supported by multiple indicators.",
+            
+            "A poorly supported producer may be characterized by few or no meaningful injector connections together with low total_allocation.",
+            
+            "A well-supported producer may have several meaningful injector connections and/or a substantial fraction of its production allocated to injection.",
+            
+            "A producer whose modeled injection contribution is the largest production component should be described as injection-dominated.",
+            
+            "A producer whose depletion contribution is the largest production component should be described as depletion-dominated.",
+            
+            "A producer whose pressure contribution is the largest production component should be described as pressure-dominated.",
+            
+            "When identifying underutilized or potentially stranded injectors, look for low injector utility and few meaningful producer connections. If actual injection rate information is unavailable, describe the conclusion as low modeled utilization rather than definitively calling the injector operationally stranded.",
+            
+            "For quantities without established absolute thresholds, such as unusually large TAU, TAUP or pressure_coefficient, compare wells relative to the population in the current simulation rather than inventing fixed thresholds.",
+            
+            "Always consider simulation quality when interpreting CRM parameters. Strong connectivity or unusual parameter values associated with poorly matched producers should be reported with reduced confidence.",
+            
+            "For broad summary requests, synthesize findings across tables rather than summarizing each table independently.",
+            
+            "For a broad simulation summary, actively identify the strongest and weakest injectors, well-supported and poorly supported producers, dominant production drivers, unusual response behavior, possible diagnostic signals and model-quality issues.",
+            
+            "Prioritize findings supported by several independent metrics.",
+            
+            "Do not enumerate every producer or injector unless the user explicitly requests an exhaustive listing.",
+            
+            "Scenario evaluation, such as predicting the impact of shutting an injector or changing injection rates, is outside the scope of this interpreter."
+        ]
+            
     )
 
 
@@ -1150,9 +1254,32 @@ if __name__ == "__main__":
     interpreter = ResultsInterpreterComponent( llm = llm )
 
     interpreter.set_data( *prepare_test_data() )
-    result = interpreter.run(query="Whats the most supported producer and its supporting injectors?")
-    print( result )
-    print()
+
+    result = interpreter.run(query="Whats the most supported producer and its supporting injectors?. Rank the producers according to support")
+    
+    print(100*'=')
+    print(100*'=')
+    print( result.cheap_output )
+    print(100*'=')
+    print(100*'=')
+    
+
+##############################################
+####                   TO DO:             ####
+##############################################
+# 1. Create the architecture in Dataiku 
+# 2. Add the semantic context there and read it from files (old code attached) TEST and document.
+# 3. Maybe we can just load them as python objects, validate using pydantic and add them to the respective agents folders
+# 4. The code to read semantic context and tables needs to be in common.
+# 5. We will need some processsing to prepare the data 
+# 6. Define golden queries, test case for them and test + document. 
+# 7. Find weakness, document them to work later on them.
+
+
+# Prepare the data for the interpreter.
+# Integrate over the training period for the primary ...etc... because we have 1 day only in the table
+# Create a notebook with a "mock" input from the UI on how it will arrive to the Agent
+
 
 
 

@@ -128,6 +128,7 @@ def catalog_from_text(text: str) -> SemanticCatalog:
         raise ValueError("Semantic catalog text cannot be empty.")
     return SemanticCatalog.model_validate_json(text)
 
+
 def catalog_from_file(path: PathLike, encoding: str = "utf-8") -> SemanticCatalog:
     """Read, validate, and return a semantic catalog from a JSON file."""
     return catalog_from_text(load_catalog_text(path, encoding))

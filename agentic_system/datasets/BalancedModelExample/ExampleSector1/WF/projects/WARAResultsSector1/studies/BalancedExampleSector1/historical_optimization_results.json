@@ -1,0 +1,1402 @@
+[
+  {
+    "dates": [
+      "2021-05-01",
+      "2026-01-01",
+      "2200-11-20"
+    ],
+    "parameters": {
+      "tau": {
+        "bounds": [
+          0.5,
+          6
+        ],
+        "init_value": 1
+      },
+      "taup": {
+        "bounds": [
+          0.5,
+          50
+        ],
+        "init_value": 1
+      },
+      "lambda": {
+        "bounds": [
+          0,
+          1.2
+        ],
+        "init_value": 0.1
+      },
+      "productivity_index": {
+        "bounds": [
+          0,
+          1
+        ],
+        "init_value": 0
+      },
+      "qo_lambda": {
+        "bounds": [
+          0,
+          1.4
+        ],
+        "init_value": 1
+      }
+    },
+    "dt": 1.0,
+    "optimizer": {
+      "maxiter": 1000,
+      "name": "SLSQP",
+      "tolerance": 0.0001
+    },
+    "primary": true,
+    "serial": true,
+    "balance": {
+      "type": "full",
+      "optimizer": {
+        "maxiter": 1234,
+        "name": "L-BFGS-B",
+        "tolerance": 0.0002468
+      }
+    },
+    "name": "BalancedExampleSector1",
+    "type": "OneLayerBalancedCRMPV2",
+    "tdate1": "2021-05-01 00:00:00",
+    "tdate2": "2026-01-01 00:00:00",
+    "tdate3": "2200-11-20 00:00:00",
+    "crm_model": "OneLayerCRMPSingleConstrained",
+    "qo": [
+      0.0
+    ],
+    "qo_date": "2021-05-01",
+    "injector_names": [
+      "MG-0380_I"
+    ],
+    "producer_names": [
+      "MG-0008_P"
+    ],
+    "counter": 38,
+    "start_time": "2026-09-15T09:31:37",
+    "elapsed_time": 0,
+    "bhp": false,
+    "rmse": 845.5049941723285,
+    "r2": -63.78790570860011,
+    "lambdas": [
+      1.2856075343526165e-05,
+      0.0,
+      1.0000000149011612
+    ],
+    "tau": 0.5,
+    "taup": 1.0,
+    "Primary support coeff": 1.0000000149011612,
+    "Productivy": 0.0,
+    "Allocation": [
+      1.2856075343526165e-05
+    ],
+    "message": "Optimization terminated successfully",
+    "allocation": [
+      1.2856075343526165e-05
+    ],
+    "SUBZONE": "ALLWARA",
+    "subzone": "ALLWARA"
+  },
+  {
+    "dates": [
+      "2021-05-01",
+      "2026-01-01",
+      "2200-11-20"
+    ],
+    "parameters": {
+      "tau": {
+        "bounds": [
+          0.5,
+          6
+        ],
+        "init_value": 1
+      },
+      "taup": {
+        "bounds": [
+          0.5,
+          50
+        ],
+        "init_value": 1
+      },
+      "lambda": {
+        "bounds": [
+          0,
+          1.2
+        ],
+        "init_value": 0.1
+      },
+      "productivity_index": {
+        "bounds": [
+          0,
+          1
+        ],
+        "init_value": 0
+      },
+      "qo_lambda": {
+        "bounds": [
+          0,
+          1.4
+        ],
+        "init_value": 1
+      }
+    },
+    "dt": 1.0,
+    "optimizer": {
+      "maxiter": 1000,
+      "name": "SLSQP",
+      "tolerance": 0.0001
+    },
+    "primary": true,
+    "serial": true,
+    "balance": {
+      "type": "full",
+      "optimizer": {
+        "maxiter": 1234,
+        "name": "L-BFGS-B",
+        "tolerance": 0.0002468
+      }
+    },
+    "name": "BalancedExampleSector1",
+    "type": "OneLayerBalancedCRMPV2",
+    "tdate1": "2021-05-01 00:00:00",
+    "tdate2": "2026-01-01 00:00:00",
+    "tdate3": "2200-11-20 00:00:00",
+    "crm_model": "OneLayerCRMPSingleConstrained",
+    "qo": [
+      89.27
+    ],
+    "qo_date": "2021-05-01",
+    "injector_names": [
+      "MG-0230_I",
+      "MG-0270_I"
+    ],
+    "producer_names": [
+      "MG-0058_P"
+    ],
+    "counter": 30,
+    "start_time": "2026-09-15T09:31:37",
+    "elapsed_time": 0,
+    "bhp": false,
+    "rmse": 211.0424489401536,
+    "r2": -8.689675183214169,
+    "lambdas": [
+      0.00012913752442049762,
+      6.680315184944025e-06,
+      2.7403936095538973e-15,
+      0.12202281714021988
+    ],
+    "tau": 5.99952250203343,
+    "taup": 0.5040503931472088,
+    "Primary support coeff": 0.12202281714021988,
+    "Productivy": 2.7403936095538973e-15,
+    "Allocation": [
+      0.00012913752442049762,
+      6.680315184944025e-06
+    ],
+    "message": "Optimization terminated successfully",
+    "allocation": [
+      0.00012913752442049762,
+      6.680315184944025e-06
+    ],
+    "SUBZONE": "ALLWARA",
+    "subzone": "ALLWARA"
+  },
+  {
+    "dates": [
+      "2021-05-01",
+      "2026-01-01",
+      "2200-11-20"
+    ],
+    "parameters": {
+      "tau": {
+        "bounds": [
+          0.5,
+          6
+        ],
+        "init_value": 1
+      },
+      "taup": {
+        "bounds": [
+          0.5,
+          50
+        ],
+        "init_value": 1
+      },
+      "lambda": {
+        "bounds": [
+          0,
+          1.2
+        ],
+        "init_value": 0.1
+      },
+      "productivity_index": {
+        "bounds": [
+          0,
+          1
+        ],
+        "init_value": 0
+      },
+      "qo_lambda": {
+        "bounds": [
+          0,
+          1.4
+        ],
+        "init_value": 1
+      }
+    },
+    "dt": 1.0,
+    "optimizer": {
+      "maxiter": 1000,
+      "name": "SLSQP",
+      "tolerance": 0.0001
+    },
+    "primary": true,
+    "serial": true,
+    "balance": {
+      "type": "full",
+      "optimizer": {
+        "maxiter": 1234,
+        "name": "L-BFGS-B",
+        "tolerance": 0.0002468
+      }
+    },
+    "name": "BalancedExampleSector1",
+    "type": "OneLayerBalancedCRMPV2",
+    "tdate1": "2021-05-01 00:00:00",
+    "tdate2": "2026-01-01 00:00:00",
+    "tdate3": "2200-11-20 00:00:00",
+    "crm_model": "OneLayerCRMPSingleConstrained",
+    "qo": [
+      486.38
+    ],
+    "qo_date": "2021-05-01",
+    "injector_names": [
+      "MG-0380_I"
+    ],
+    "producer_names": [
+      "MG-0068_P"
+    ],
+    "counter": 73,
+    "start_time": "2026-09-15T09:31:37",
+    "elapsed_time": 0,
+    "bhp": false,
+    "rmse": 66.8648841128374,
+    "r2": 0.528572218788034,
+    "lambdas": [
+      3.804412619833802e-05,
+      0.0,
+      1.235315895829388
+    ],
+    "tau": 5.93592152191723,
+    "taup": 24.618831670288696,
+    "Primary support coeff": 1.235315895829388,
+    "Productivy": 0.0,
+    "Allocation": [
+      3.804412619833802e-05
+    ],
+    "message": "Optimization terminated successfully",
+    "allocation": [
+      3.804412619833802e-05
+    ],
+    "SUBZONE": "ALLWARA",
+    "subzone": "ALLWARA"
+  },
+  {
+    "dates": [
+      "2021-05-01",
+      "2026-01-01",
+      "2200-11-20"
+    ],
+    "parameters": {
+      "tau": {
+        "bounds": [
+          0.5,
+          6
+        ],
+        "init_value": 1
+      },
+      "taup": {
+        "bounds": [
+          0.5,
+          50
+        ],
+        "init_value": 1
+      },
+      "lambda": {
+        "bounds": [
+          0,
+          1.2
+        ],
+        "init_value": 0.1
+      },
+      "productivity_index": {
+        "bounds": [
+          0,
+          1
+        ],
+        "init_value": 0
+      },
+      "qo_lambda": {
+        "bounds": [
+          0,
+          1.4
+        ],
+        "init_value": 1
+      }
+    },
+    "dt": 1.0,
+    "optimizer": {
+      "maxiter": 1000,
+      "name": "SLSQP",
+      "tolerance": 0.0001
+    },
+    "primary": true,
+    "serial": true,
+    "balance": {
+      "type": "full",
+      "optimizer": {
+        "maxiter": 1234,
+        "name": "L-BFGS-B",
+        "tolerance": 0.0002468
+      }
+    },
+    "name": "BalancedExampleSector1",
+    "type": "OneLayerBalancedCRMPV2",
+    "tdate1": "2021-05-01 00:00:00",
+    "tdate2": "2026-01-01 00:00:00",
+    "tdate3": "2200-11-20 00:00:00",
+    "crm_model": "OneLayerCRMPSingleConstrained",
+    "qo": [
+      1816.55
+    ],
+    "qo_date": "2021-05-01",
+    "injector_names": [
+      "MG-0230_I",
+      "MG-0621_I"
+    ],
+    "producer_names": [
+      "MG-0109_P"
+    ],
+    "counter": 97,
+    "start_time": "2026-09-15T09:31:37",
+    "elapsed_time": 0,
+    "bhp": false,
+    "rmse": 981.8806997073574,
+    "r2": -0.35712314101730014,
+    "lambdas": [
+      0.9973985586273779,
+      0.9969784441658697,
+      1.926523856504218e-14,
+      1.4
+    ],
+    "tau": 1.023405513460593,
+    "taup": 50.0,
+    "Primary support coeff": 1.4,
+    "Productivy": 1.926523856504218e-14,
+    "Allocation": [
+      0.9973985586273779,
+      0.9969784441658697
+    ],
+    "message": "Optimization terminated successfully",
+    "allocation": [
+      0.9973985586273779,
+      0.9969784441658697
+    ],
+    "SUBZONE": "ALLWARA",
+    "subzone": "ALLWARA"
+  },
+  {
+    "dates": [
+      "2021-05-01",
+      "2026-01-01",
+      "2200-11-20"
+    ],
+    "parameters": {
+      "tau": {
+        "bounds": [
+          0.5,
+          6
+        ],
+        "init_value": 1
+      },
+      "taup": {
+        "bounds": [
+          0.5,
+          50
+        ],
+        "init_value": 1
+      },
+      "lambda": {
+        "bounds": [
+          0,
+          1.2
+        ],
+        "init_value": 0.1
+      },
+      "productivity_index": {
+        "bounds": [
+          0,
+          1
+        ],
+        "init_value": 0
+      },
+      "qo_lambda": {
+        "bounds": [
+          0,
+          1.4
+        ],
+        "init_value": 1
+      }
+    },
+    "dt": 1.0,
+    "optimizer": {
+      "maxiter": 1000,
+      "name": "SLSQP",
+      "tolerance": 0.0001
+    },
+    "primary": true,
+    "serial": true,
+    "balance": {
+      "type": "full",
+      "optimizer": {
+        "maxiter": 1234,
+        "name": "L-BFGS-B",
+        "tolerance": 0.0002468
+      }
+    },
+    "name": "BalancedExampleSector1",
+    "type": "OneLayerBalancedCRMPV2",
+    "tdate1": "2021-05-01 00:00:00",
+    "tdate2": "2026-01-01 00:00:00",
+    "tdate3": "2200-11-20 00:00:00",
+    "crm_model": "OneLayerCRMPSingleConstrained",
+    "qo": [
+      920.33
+    ],
+    "qo_date": "2021-05-01",
+    "injector_names": [
+      "MG-0380_I",
+      "MG-0621_I"
+    ],
+    "producer_names": [
+      "MG-0278_P"
+    ],
+    "counter": 44,
+    "start_time": "2026-09-15T09:31:37",
+    "elapsed_time": 0,
+    "bhp": false,
+    "rmse": 992.6380252800013,
+    "r2": -0.7283814172772647,
+    "lambdas": [
+      0.9974704889822326,
+      0.0005441676982919993,
+      0.0,
+      1.0203904623210154
+    ],
+    "tau": 6.0,
+    "taup": 1.3731106005963416,
+    "Primary support coeff": 1.0203904623210154,
+    "Productivy": 0.0,
+    "Allocation": [
+      0.9974704889822326,
+      0.0005441676982919993
+    ],
+    "message": "Optimization terminated successfully",
+    "allocation": [
+      0.9974704889822326,
+      0.0005441676982919993
+    ],
+    "SUBZONE": "ALLWARA",
+    "subzone": "ALLWARA"
+  },
+  {
+    "dates": [
+      "2021-05-01",
+      "2026-01-01",
+      "2200-11-20"
+    ],
+    "parameters": {
+      "tau": {
+        "bounds": [
+          0.5,
+          6
+        ],
+        "init_value": 1
+      },
+      "taup": {
+        "bounds": [
+          0.5,
+          50
+        ],
+        "init_value": 1
+      },
+      "lambda": {
+        "bounds": [
+          0,
+          1.2
+        ],
+        "init_value": 0.1
+      },
+      "productivity_index": {
+        "bounds": [
+          0,
+          1
+        ],
+        "init_value": 0
+      },
+      "qo_lambda": {
+        "bounds": [
+          0,
+          1.4
+        ],
+        "init_value": 1
+      }
+    },
+    "dt": 1.0,
+    "optimizer": {
+      "maxiter": 1000,
+      "name": "SLSQP",
+      "tolerance": 0.0001
+    },
+    "primary": true,
+    "serial": true,
+    "balance": {
+      "type": "full",
+      "optimizer": {
+        "maxiter": 1234,
+        "name": "L-BFGS-B",
+        "tolerance": 0.0002468
+      }
+    },
+    "name": "BalancedExampleSector1",
+    "type": "OneLayerBalancedCRMPV2",
+    "tdate1": "2021-05-01 00:00:00",
+    "tdate2": "2026-01-01 00:00:00",
+    "tdate3": "2200-11-20 00:00:00",
+    "crm_model": "OneLayerCRMPSingleConstrained",
+    "qo": [
+      1086.86
+    ],
+    "qo_date": "2021-05-01",
+    "injector_names": [
+      "MG-0013_I",
+      "MG-0270_I",
+      "MG-0526_I",
+      "MG-0528_I",
+      "MG-0571_I"
+    ],
+    "producer_names": [
+      "MG-0338_P"
+    ],
+    "counter": 132,
+    "start_time": "2026-09-15T09:31:37",
+    "elapsed_time": 0,
+    "bhp": false,
+    "rmse": 286.8639171107189,
+    "r2": -2.7298936448106788,
+    "lambdas": [
+      1.349329560125649e-05,
+      7.834694435523869e-06,
+      6.172702600178233e-06,
+      0.19339950611458265,
+      0.0014760200580632135,
+      0.0,
+      1.4
+    ],
+    "tau": 5.085353001079705,
+    "taup": 50.0,
+    "Primary support coeff": 1.4,
+    "Productivy": 0.0,
+    "Allocation": [
+      1.349329560125649e-05,
+      7.834694435523869e-06,
+      6.172702600178233e-06,
+      0.19339950611458265,
+      0.0014760200580632135
+    ],
+    "message": "Optimization terminated successfully",
+    "allocation": [
+      1.349329560125649e-05,
+      7.834694435523869e-06,
+      6.172702600178233e-06,
+      0.19339950611458265,
+      0.0014760200580632135
+    ],
+    "SUBZONE": "ALLWARA",
+    "subzone": "ALLWARA"
+  },
+  {
+    "dates": [
+      "2021-05-01",
+      "2026-01-01",
+      "2200-11-20"
+    ],
+    "parameters": {
+      "tau": {
+        "bounds": [
+          0.5,
+          6
+        ],
+        "init_value": 1
+      },
+      "taup": {
+        "bounds": [
+          0.5,
+          50
+        ],
+        "init_value": 1
+      },
+      "lambda": {
+        "bounds": [
+          0,
+          1.2
+        ],
+        "init_value": 0.1
+      },
+      "productivity_index": {
+        "bounds": [
+          0,
+          1
+        ],
+        "init_value": 0
+      },
+      "qo_lambda": {
+        "bounds": [
+          0,
+          1.4
+        ],
+        "init_value": 1
+      }
+    },
+    "dt": 1.0,
+    "optimizer": {
+      "maxiter": 1000,
+      "name": "SLSQP",
+      "tolerance": 0.0001
+    },
+    "primary": true,
+    "serial": true,
+    "balance": {
+      "type": "full",
+      "optimizer": {
+        "maxiter": 1234,
+        "name": "L-BFGS-B",
+        "tolerance": 0.0002468
+      }
+    },
+    "name": "BalancedExampleSector1",
+    "type": "OneLayerBalancedCRMPV2",
+    "tdate1": "2021-05-01 00:00:00",
+    "tdate2": "2026-01-01 00:00:00",
+    "tdate3": "2200-11-20 00:00:00",
+    "crm_model": "OneLayerCRMPSingleConstrained",
+    "qo": [
+      0.0
+    ],
+    "qo_date": "2021-05-01",
+    "injector_names": [
+      "MG-0526_I",
+      "MG-0528_I",
+      "MG-0578_I",
+      "MG-0582_I"
+    ],
+    "producer_names": [
+      "MG-0525_P"
+    ],
+    "counter": 76,
+    "start_time": "2026-09-15T09:31:37",
+    "elapsed_time": 0,
+    "bhp": false,
+    "rmse": 1648.259623616706,
+    "r2": -29.56309128523048,
+    "lambdas": [
+      1.2089693101659562e-05,
+      0.0001335920946944021,
+      0.2086254281443708,
+      0.1083811446118412,
+      0.0,
+      1.0000000149011612
+    ],
+    "tau": 4.886157741016921,
+    "taup": 1.0,
+    "Primary support coeff": 1.0000000149011612,
+    "Productivy": 0.0,
+    "Allocation": [
+      1.2089693101659562e-05,
+      0.0001335920946944021,
+      0.2086254281443708,
+      0.1083811446118412
+    ],
+    "message": "Optimization terminated successfully",
+    "allocation": [
+      1.2089693101659562e-05,
+      0.0001335920946944021,
+      0.2086254281443708,
+      0.1083811446118412
+    ],
+    "SUBZONE": "ALLWARA",
+    "subzone": "ALLWARA"
+  },
+  {
+    "dates": [
+      "2021-05-01",
+      "2026-01-01",
+      "2200-11-20"
+    ],
+    "parameters": {
+      "tau": {
+        "bounds": [
+          0.5,
+          6
+        ],
+        "init_value": 1
+      },
+      "taup": {
+        "bounds": [
+          0.5,
+          50
+        ],
+        "init_value": 1
+      },
+      "lambda": {
+        "bounds": [
+          0,
+          1.2
+        ],
+        "init_value": 0.1
+      },
+      "productivity_index": {
+        "bounds": [
+          0,
+          1
+        ],
+        "init_value": 0
+      },
+      "qo_lambda": {
+        "bounds": [
+          0,
+          1.4
+        ],
+        "init_value": 1
+      }
+    },
+    "dt": 1.0,
+    "optimizer": {
+      "maxiter": 1000,
+      "name": "SLSQP",
+      "tolerance": 0.0001
+    },
+    "primary": true,
+    "serial": true,
+    "balance": {
+      "type": "full",
+      "optimizer": {
+        "maxiter": 1234,
+        "name": "L-BFGS-B",
+        "tolerance": 0.0002468
+      }
+    },
+    "name": "BalancedExampleSector1",
+    "type": "OneLayerBalancedCRMPV2",
+    "tdate1": "2021-05-01 00:00:00",
+    "tdate2": "2026-01-01 00:00:00",
+    "tdate3": "2200-11-20 00:00:00",
+    "crm_model": "OneLayerCRMPSingleConstrained",
+    "qo": [
+      0.0
+    ],
+    "qo_date": "2021-05-01",
+    "injector_names": [
+      "MG-0013_I",
+      "MG-0270_I",
+      "MG-0526_I",
+      "MG-0528_I",
+      "MG-0571_I"
+    ],
+    "producer_names": [
+      "MG-0527_P"
+    ],
+    "counter": 122,
+    "start_time": "2026-09-15T09:31:37",
+    "elapsed_time": 0,
+    "bhp": false,
+    "rmse": 511.59361766275356,
+    "r2": -17.656513206357072,
+    "lambdas": [
+      6.128899766755615e-06,
+      0.9975128977238936,
+      6.128832973514878e-06,
+      0.00039566581347574083,
+      0.0011469898466871012,
+      0.0,
+      1.0
+    ],
+    "tau": 6.0,
+    "taup": 1.0,
+    "Primary support coeff": 1.0,
+    "Productivy": 0.0,
+    "Allocation": [
+      6.128899766755615e-06,
+      0.9975128977238936,
+      6.128832973514878e-06,
+      0.00039566581347574083,
+      0.0011469898466871012
+    ],
+    "message": "Optimization terminated successfully",
+    "allocation": [
+      6.128899766755615e-06,
+      0.9975128977238936,
+      6.128832973514878e-06,
+      0.00039566581347574083,
+      0.0011469898466871012
+    ],
+    "SUBZONE": "ALLWARA",
+    "subzone": "ALLWARA"
+  },
+  {
+    "dates": [
+      "2021-05-01",
+      "2026-01-01",
+      "2200-11-20"
+    ],
+    "parameters": {
+      "tau": {
+        "bounds": [
+          0.5,
+          6
+        ],
+        "init_value": 1
+      },
+      "taup": {
+        "bounds": [
+          0.5,
+          50
+        ],
+        "init_value": 1
+      },
+      "lambda": {
+        "bounds": [
+          0,
+          1.2
+        ],
+        "init_value": 0.1
+      },
+      "productivity_index": {
+        "bounds": [
+          0,
+          1
+        ],
+        "init_value": 0
+      },
+      "qo_lambda": {
+        "bounds": [
+          0,
+          1.4
+        ],
+        "init_value": 1
+      }
+    },
+    "dt": 1.0,
+    "optimizer": {
+      "maxiter": 1000,
+      "name": "SLSQP",
+      "tolerance": 0.0001
+    },
+    "primary": true,
+    "serial": true,
+    "balance": {
+      "type": "full",
+      "optimizer": {
+        "maxiter": 1234,
+        "name": "L-BFGS-B",
+        "tolerance": 0.0002468
+      }
+    },
+    "name": "BalancedExampleSector1",
+    "type": "OneLayerBalancedCRMPV2",
+    "tdate1": "2021-05-01 00:00:00",
+    "tdate2": "2026-01-01 00:00:00",
+    "tdate3": "2200-11-20 00:00:00",
+    "crm_model": "OneLayerCRMPSingleConstrained",
+    "qo": [
+      0.0
+    ],
+    "qo_date": "2021-05-01",
+    "injector_names": [
+      "MG-0013_I",
+      "MG-0526_I",
+      "MG-0571_I"
+    ],
+    "producer_names": [
+      "MG-0553_P"
+    ],
+    "counter": 58,
+    "start_time": "2026-09-15T09:31:37",
+    "elapsed_time": 0,
+    "bhp": false,
+    "rmse": 714.1136800169025,
+    "r2": -2.625559323339764,
+    "lambdas": [
+      0.997507803166292,
+      0.9974969322463275,
+      0.0065994295195076795,
+      0.0,
+      1.0000000149011612
+    ],
+    "tau": 6.0,
+    "taup": 1.0,
+    "Primary support coeff": 1.0000000149011612,
+    "Productivy": 0.0,
+    "Allocation": [
+      0.997507803166292,
+      0.9974969322463275,
+      0.0065994295195076795
+    ],
+    "message": "Optimization terminated successfully",
+    "allocation": [
+      0.997507803166292,
+      0.9974969322463275,
+      0.0065994295195076795
+    ],
+    "SUBZONE": "ALLWARA",
+    "subzone": "ALLWARA"
+  },
+  {
+    "dates": [
+      "2021-05-01",
+      "2026-01-01",
+      "2200-11-20"
+    ],
+    "parameters": {
+      "tau": {
+        "bounds": [
+          0.5,
+          6
+        ],
+        "init_value": 1
+      },
+      "taup": {
+        "bounds": [
+          0.5,
+          50
+        ],
+        "init_value": 1
+      },
+      "lambda": {
+        "bounds": [
+          0,
+          1.2
+        ],
+        "init_value": 0.1
+      },
+      "productivity_index": {
+        "bounds": [
+          0,
+          1
+        ],
+        "init_value": 0
+      },
+      "qo_lambda": {
+        "bounds": [
+          0,
+          1.4
+        ],
+        "init_value": 1
+      }
+    },
+    "dt": 1.0,
+    "optimizer": {
+      "maxiter": 1000,
+      "name": "SLSQP",
+      "tolerance": 0.0001
+    },
+    "primary": true,
+    "serial": true,
+    "balance": {
+      "type": "full",
+      "optimizer": {
+        "maxiter": 1234,
+        "name": "L-BFGS-B",
+        "tolerance": 0.0002468
+      }
+    },
+    "name": "BalancedExampleSector1",
+    "type": "OneLayerBalancedCRMPV2",
+    "tdate1": "2021-05-01 00:00:00",
+    "tdate2": "2026-01-01 00:00:00",
+    "tdate3": "2200-11-20 00:00:00",
+    "crm_model": "OneLayerCRMPSingleConstrained",
+    "qo": [
+      0.0
+    ],
+    "qo_date": "2021-05-01",
+    "injector_names": [
+      "MG-0289_I",
+      "MG-0380_I",
+      "MG-0621_I"
+    ],
+    "producer_names": [
+      "MG-0567_P"
+    ],
+    "counter": 162,
+    "start_time": "2026-09-15T09:31:37",
+    "elapsed_time": 0,
+    "bhp": false,
+    "rmse": 261.44133163852104,
+    "r2": 0.30437156582555147,
+    "lambdas": [
+      0.5972551058546818,
+      6.128670500484963e-06,
+      6.125647272645876e-06,
+      0.0,
+      1.0
+    ],
+    "tau": 3.5227931534118673,
+    "taup": 1.0,
+    "Primary support coeff": 1.0,
+    "Productivy": 0.0,
+    "Allocation": [
+      0.5972551058546818,
+      6.128670500484963e-06,
+      6.125647272645876e-06
+    ],
+    "message": "Optimization terminated successfully",
+    "allocation": [
+      0.5972551058546818,
+      6.128670500484963e-06,
+      6.125647272645876e-06
+    ],
+    "SUBZONE": "ALLWARA",
+    "subzone": "ALLWARA"
+  },
+  {
+    "dates": [
+      "2021-05-01",
+      "2026-01-01",
+      "2200-11-20"
+    ],
+    "parameters": {
+      "tau": {
+        "bounds": [
+          0.5,
+          6
+        ],
+        "init_value": 1
+      },
+      "taup": {
+        "bounds": [
+          0.5,
+          50
+        ],
+        "init_value": 1
+      },
+      "lambda": {
+        "bounds": [
+          0,
+          1.2
+        ],
+        "init_value": 0.1
+      },
+      "productivity_index": {
+        "bounds": [
+          0,
+          1
+        ],
+        "init_value": 0
+      },
+      "qo_lambda": {
+        "bounds": [
+          0,
+          1.4
+        ],
+        "init_value": 1
+      }
+    },
+    "dt": 1.0,
+    "optimizer": {
+      "maxiter": 1000,
+      "name": "SLSQP",
+      "tolerance": 0.0001
+    },
+    "primary": true,
+    "serial": true,
+    "balance": {
+      "type": "full",
+      "optimizer": {
+        "maxiter": 1234,
+        "name": "L-BFGS-B",
+        "tolerance": 0.0002468
+      }
+    },
+    "name": "BalancedExampleSector1",
+    "type": "OneLayerBalancedCRMPV2",
+    "tdate1": "2021-05-01 00:00:00",
+    "tdate2": "2026-01-01 00:00:00",
+    "tdate3": "2200-11-20 00:00:00",
+    "crm_model": "OneLayerCRMPSingleConstrained",
+    "qo": [
+      0.0
+    ],
+    "qo_date": "2021-05-01",
+    "injector_names": [
+      "MG-0528_I",
+      "MG-0578_I",
+      "MG-0582_I"
+    ],
+    "producer_names": [
+      "MG-0579_P"
+    ],
+    "counter": 42,
+    "start_time": "2026-09-15T09:31:37",
+    "elapsed_time": 0,
+    "bhp": false,
+    "rmse": 168.76298672865104,
+    "r2": -0.7274724743733949,
+    "lambdas": [
+      4.935804458626845e-05,
+      0.2687461592930456,
+      0.0015223352262203292,
+      0.0,
+      1.0000000149011612
+    ],
+    "tau": 0.5,
+    "taup": 1.0,
+    "Primary support coeff": 1.0000000149011612,
+    "Productivy": 0.0,
+    "Allocation": [
+      4.935804458626845e-05,
+      0.2687461592930456,
+      0.0015223352262203292
+    ],
+    "message": "Optimization terminated successfully",
+    "allocation": [
+      4.935804458626845e-05,
+      0.2687461592930456,
+      0.0015223352262203292
+    ],
+    "SUBZONE": "ALLWARA",
+    "subzone": "ALLWARA"
+  },
+  {
+    "dates": [
+      "2021-05-01",
+      "2026-01-01",
+      "2200-11-20"
+    ],
+    "parameters": {
+      "tau": {
+        "bounds": [
+          0.5,
+          6
+        ],
+        "init_value": 1
+      },
+      "taup": {
+        "bounds": [
+          0.5,
+          50
+        ],
+        "init_value": 1
+      },
+      "lambda": {
+        "bounds": [
+          0,
+          1.2
+        ],
+        "init_value": 0.1
+      },
+      "productivity_index": {
+        "bounds": [
+          0,
+          1
+        ],
+        "init_value": 0
+      },
+      "qo_lambda": {
+        "bounds": [
+          0,
+          1.4
+        ],
+        "init_value": 1
+      }
+    },
+    "dt": 1.0,
+    "optimizer": {
+      "maxiter": 1000,
+      "name": "SLSQP",
+      "tolerance": 0.0001
+    },
+    "primary": true,
+    "serial": true,
+    "balance": {
+      "type": "full",
+      "optimizer": {
+        "maxiter": 1234,
+        "name": "L-BFGS-B",
+        "tolerance": 0.0002468
+      }
+    },
+    "name": "BalancedExampleSector1",
+    "type": "OneLayerBalancedCRMPV2",
+    "tdate1": "2021-05-01 00:00:00",
+    "tdate2": "2026-01-01 00:00:00",
+    "tdate3": "2200-11-20 00:00:00",
+    "crm_model": "OneLayerCRMPSingleConstrained",
+    "qo": [
+      0.0
+    ],
+    "qo_date": "2021-05-01",
+    "injector_names": [
+      "MG-0303_I",
+      "MG-0526_I",
+      "MG-0528_I",
+      "MG-0571_I",
+      "MG-0578_I",
+      "MG-0582_I"
+    ],
+    "producer_names": [
+      "MG-0581_P"
+    ],
+    "counter": 114,
+    "start_time": "2026-09-15T09:31:37",
+    "elapsed_time": 0,
+    "bhp": false,
+    "rmse": 1199.522717217668,
+    "r2": -4.3312781763396515,
+    "lambdas": [
+      0.9859987236146459,
+      6.128832973514878e-06,
+      0.786109421556062,
+      0.9883277410363883,
+      0.0701268669397106,
+      0.0015534011925672434,
+      0.0,
+      1.0000000149011612
+    ],
+    "tau": 0.5,
+    "taup": 1.0,
+    "Primary support coeff": 1.0000000149011612,
+    "Productivy": 0.0,
+    "Allocation": [
+      0.9859987236146459,
+      6.128832973514878e-06,
+      0.786109421556062,
+      0.9883277410363883,
+      0.0701268669397106,
+      0.0015534011925672434
+    ],
+    "message": "Optimization terminated successfully",
+    "allocation": [
+      0.9859987236146459,
+      6.128832973514878e-06,
+      0.786109421556062,
+      0.9883277410363883,
+      0.0701268669397106,
+      0.0015534011925672434
+    ],
+    "SUBZONE": "ALLWARA",
+    "subzone": "ALLWARA"
+  },
+  {
+    "dates": [
+      "2021-05-01",
+      "2026-01-01",
+      "2200-11-20"
+    ],
+    "parameters": {
+      "tau": {
+        "bounds": [
+          0.5,
+          6
+        ],
+        "init_value": 1
+      },
+      "taup": {
+        "bounds": [
+          0.5,
+          50
+        ],
+        "init_value": 1
+      },
+      "lambda": {
+        "bounds": [
+          0,
+          1.2
+        ],
+        "init_value": 0.1
+      },
+      "productivity_index": {
+        "bounds": [
+          0,
+          1
+        ],
+        "init_value": 0
+      },
+      "qo_lambda": {
+        "bounds": [
+          0,
+          1.4
+        ],
+        "init_value": 1
+      }
+    },
+    "dt": 1.0,
+    "optimizer": {
+      "maxiter": 1000,
+      "name": "SLSQP",
+      "tolerance": 0.0001
+    },
+    "primary": true,
+    "serial": true,
+    "balance": {
+      "type": "full",
+      "optimizer": {
+        "maxiter": 1234,
+        "name": "L-BFGS-B",
+        "tolerance": 0.0002468
+      }
+    },
+    "name": "BalancedExampleSector1",
+    "type": "OneLayerBalancedCRMPV2",
+    "tdate1": "2021-05-01 00:00:00",
+    "tdate2": "2026-01-01 00:00:00",
+    "tdate3": "2200-11-20 00:00:00",
+    "crm_model": "OneLayerCRMPSingleConstrained",
+    "qo": [
+      0.0
+    ],
+    "qo_date": "2021-05-01",
+    "injector_names": [
+      "MG-0582_I"
+    ],
+    "producer_names": [
+      "MG-0583_P"
+    ],
+    "counter": 39,
+    "start_time": "2026-09-15T09:31:37",
+    "elapsed_time": 0,
+    "bhp": false,
+    "rmse": 98.63887773539838,
+    "r2": -20.916696017316657,
+    "lambdas": [
+      0.2970106971043403,
+      0.0,
+      1.0
+    ],
+    "tau": 0.5,
+    "taup": 1.0,
+    "Primary support coeff": 1.0,
+    "Productivy": 0.0,
+    "Allocation": [
+      0.2970106971043403
+    ],
+    "message": "Optimization terminated successfully",
+    "allocation": [
+      0.2970106971043403
+    ],
+    "SUBZONE": "ALLWARA",
+    "subzone": "ALLWARA"
+  }
+]

@@ -1,0 +1,216 @@
+{
+  "project_name": "WARAResultsSector1",
+  "filters": {
+    "sector": [
+      1
+    ],
+    "subzone": "ALLWARA",
+    "date": [
+      "2010-01-01",
+      "2026-04-01"
+    ]
+  },
+  "export_only": false,
+  "run_liquid": true,
+  "run_watercut": false,
+  "run_pfm": false,
+  "name": "BalancedExampleSector1",
+  "distance": 1250,
+  "explicit": {
+    "subzone": {
+      "ALLWARA": {
+        "MG-0008_P": [
+          "MG-0380_I"
+        ],
+        "MG-0058_P": [
+          "MG-0270_I",
+          "MG-0230_I"
+        ],
+        "MG-0068_P": [
+          "MG-0380_I"
+        ],
+        "MG-0109_P": [
+          "MG-0621_I",
+          "MG-0230_I"
+        ],
+        "MG-0278_P": [
+          "MG-0380_I",
+          "MG-0621_I"
+        ],
+        "MG-0313_P": [
+          "MG-0528_I",
+          "MG-0303_I",
+          "MG-0582_I",
+          "MG-0585_I"
+        ],
+        "MG-0314_P": [
+          "MG-0526_I",
+          "MG-0571_I",
+          "MG-0528_I",
+          "MG-0303_I",
+          "MG-0582_I"
+        ],
+        "MG-0338_P": [
+          "MG-0270_I",
+          "MG-0013_I",
+          "MG-0264_I",
+          "MG-0526_I",
+          "MG-0571_I",
+          "MG-0528_I"
+        ],
+        "MG-0525_P": [
+          "MG-0526_I",
+          "MG-0528_I",
+          "MG-0578_I",
+          "MG-0582_I"
+        ],
+        "MG-0527_P": [
+          "MG-0013_I",
+          "MG-0526_I",
+          "MG-0571_I",
+          "MG-0528_I",
+          "MG-0270_I"
+        ],
+        "MG-0553_P": [
+          "MG-0526_I",
+          "MG-0571_I",
+          "MG-0013_I"
+        ],
+        "MG-0567_P": [
+          "MG-0289_I",
+          "MG-0380_I",
+          "MG-0621_I"
+        ],
+        "MG-0579_P": [
+          "MG-0528_I",
+          "MG-0578_I",
+          "MG-0582_I",
+          "MG-0585_I"
+        ],
+        "MG-0581_P": [
+          "MG-0526_I",
+          "MG-0571_I",
+          "MG-0528_I",
+          "MG-0303_I",
+          "MG-0578_I",
+          "MG-0582_I",
+          "MG-0585_I"
+        ],
+        "MG-0583_P": [
+          "MG-0582_I",
+          "MG-0585_I"
+        ],
+        "MG-0584_P": [
+          "MG-0528_I",
+          "MG-0303_I",
+          "MG-0578_I",
+          "MG-0582_I",
+          "MG-0585_I"
+        ],
+        "MG-0619_P": [
+          "MG-0526_I",
+          "MG-0528_I",
+          "MG-0578_I"
+        ]
+      }
+    }
+  },
+  "simulation": {
+    "name": "BalancedExampleSector1",
+    "type": "OneLayerBalancedCRMPV2",
+    "balance": {
+      "type": "full",
+      "optimizer": {
+        "maxiter": 1234,
+        "name": "L-BFGS-B",
+        "tolerance": 0.0002468
+      }
+    },
+    "dates": [
+      "2021-05-01",
+      "2026-01-01"
+    ],
+    "parameters": {
+      "tau": {
+        "bounds": [
+          0.5,
+          6
+        ],
+        "init_value": 1
+      },
+      "taup": {
+        "bounds": [
+          0.5,
+          50
+        ],
+        "init_value": 1
+      },
+      "lambda": {
+        "bounds": [
+          0,
+          1.2
+        ],
+        "init_value": 0.1
+      },
+      "productivity_index": {
+        "bounds": [
+          0,
+          1
+        ],
+        "init_value": 0
+      },
+      "qo_lambda": {
+        "bounds": [
+          0,
+          1.4
+        ],
+        "init_value": 1
+      }
+    }
+  },
+  "koval": {
+    "dates": [
+      "2010-11-01",
+      "2023-11-01"
+    ],
+    "name": "BalancedExampleSector1",
+    "parameters": {
+      "name": "BalancedExampleSector1",
+      "vp": {
+        "bounds": [
+          110000.00000000003,
+          5000000.000000002
+        ],
+        "init_value": 110000.00000000003
+      },
+      "kval": {
+        "bounds": [
+          1.05,
+          45
+        ],
+        "init_value": 1.05
+      },
+      "wo": {
+        "bounds": [
+          0,
+          50000
+        ],
+        "init_value": 0
+      },
+      "fo": {
+        "bounds": [
+          0.01,
+          0.05
+        ],
+        "init_value": 0.01
+      }
+    }
+  },
+  "managed_folder_name": "azFolder",
+  "app_name": "WF",
+  "data_folder_name": "data",
+  "projects_folder_name": "projects",
+  "studies_folder_name": "studies",
+  "scenario_id": "RUN_PIPELINE_MASTER",
+  "exported_from_ui": true
+}

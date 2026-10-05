@@ -247,6 +247,8 @@ def test_planner_tool():
     Finally, tell me whats the VRR in sector 4 and if it is above or below the average 
     VRR for the other sectors."""
 
+    response = None 
+
     try:
         response = planner_tool.invoke({"query": user_query})
         print(response)
@@ -255,9 +257,12 @@ def test_planner_tool():
         print(f"Error during planning: {e}")
 
     print()
-
+    return response
 
 if __name__ == "__main__":
     #test_planner()
-    test_planner_tool()
-
+    response  = test_planner_tool()
+    print()
+    pprint.pprint( response.model_dump())
+    print() 
+    

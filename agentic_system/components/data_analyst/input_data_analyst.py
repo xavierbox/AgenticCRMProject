@@ -1,10 +1,13 @@
 
 
 import inspect
+from pathlib import Path
 import sys
 
 import inspect
 import sys
+
+import pandas as pd
 sys.path.append("./")  # Add the parent directory to the Python path
 sys.path.append("../")  # Add the parent directory to the Python path
 sys.path.append("../../")  # Add the parent directory to the Python path
@@ -99,6 +102,40 @@ class DataAnalyst:
         )
 
 
+class MockDataDrivenStorage:
+        
+    def __init__( self, config_vars ):
+        pass 
+
+    def get_project_dataset(self, project_name=None, filters=None):
+        #path =  "../datasets/Demo1/"
+        path =  Path("C:/Work/2026/AgenticCRMProject/agentic_system/datasets/IX5I_4P/") 
+        print( str(path.resolve()) )
+        print(f"{path}")
+        print() 
+
+        inj, prod, locs = self.fetch_data(path) 
+
+                        
+        return inj, prod, locs
+
+    def fetch_data(self,path:Path):
+        inj  = pd.read_csv(path / "injectors.csv")
+        pinj = pd.read_csv(path / "producers.csv")
+        locs = pd.read_csv(path / "locations.csv")
+        inj['DATE'] = pd.to_datetime( inj['DATE'],dayfirst=True)
+        inj['DAY']   = inj['DATE'].dt.day
+        inj['MONTH'] = inj['DATE'].dt.month
+        inj['YEAR']  = inj['DATE'].dt.year
+        pinj['DATE'] = pd.to_datetime( pinj['DATE'],dayfirst=True)
+        pinj['DAY']   = pinj['DATE'].dt.day
+        pinj['MONTH'] = pinj['DATE'].dt.month
+        pinj['YEAR']  = pinj['DATE'].dt.year
+
+
+        return inj, pinj, locs
+
+
 def get_data_analyst_as_structured_tool() -> StructuredTool:
     """
     Returns a DataAnalyst instance that can be used as a structured tool in LangChain.
@@ -134,14 +171,25 @@ def test_component_as_tool():
 
 if __name__ == "__main__":
 
- 
-    response = test_component()
-    print( response )
-    print( type(response) )
+
+    storage = MockDataDrivenStorage( None ) 
+    inj, prod, locs = storage.get_project_dataset(); 
+    print( inj.sample(3))
+    print( prod.sample(3))
+    print( locs.sample(3)) 
     print() 
 
 
-    response = test_component_as_tool()
-    print( type(response) )
-    print() 
+
+
+
+    #response = test_component()
+    #print( response )
+    #print( type(response) )
+    #print() 
+
+
+    #response = test_component_as_tool()
+    #print( type(response) )
+    #print() 
 
