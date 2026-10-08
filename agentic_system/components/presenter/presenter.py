@@ -1,6 +1,9 @@
 import sys
 from uuid import uuid4
 
+#from yaml 
+import warnings as warnings_module
+
 sys.path.append("./")  # Add the parent directory to the Python path
 sys.path.append("../")  # Add the parent directory to the Python path
 sys.path.append("../../")  # Add the parent directory to the Python path
@@ -9,7 +12,7 @@ sys.path.append("../../")  # Add the parent directory to the Python path
 from agentic_system.common.base_plan import ExecutorState
 from agentic_system.components.presenter.prompts import * 
 
-import inspect
+import inspect  as inspect_module 
 
 from langchain_core.messages import HumanMessage, AIMessage, AnyMessage, SystemMessage
 from langchain_core.tools import StructuredTool
@@ -977,7 +980,11 @@ class TableResponseProcessor:
         """
         table_name = getattr(data_result, "table_name", "unknown_table")
         table_description = getattr(data_result, "description", None)
-        df = data_result.dataframe
+        #df = data_result.dataframe
+        df = pd.DataFrame.from_records(
+                    data_result.records,
+                    columns=data_result.columns,
+                )
 
         if df is None or df.empty:
             return f"Table: {table_name}\nRows: 0\nColumns: 0\nColumn summaries: []"
@@ -1046,8 +1053,8 @@ class TableResponseProcessor:
         if values.empty:
             return pd.Series(dtype="datetime64[ns]")
 
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
+        with warnings_module.catch_warnings():
+            warnings_module.filterwarnings(
                 "ignore",
                 message="Could not infer format.*",
                 category=UserWarning,
@@ -1220,6 +1227,30 @@ class PresenterComponent4:
         self.config = config or PresenterConfig()
         self.charting_tools = self.config.charting_tools
 
+
+    agent_name = "presenter"
+
+    _artifact_storage: dict[str, TaskResult]|None = None
+
+    @property
+    def artifact_storage(self):
+        return self._artifact_storage
+    
+    @artifact_storage.setter
+    def artifact_storage(self, value):
+        self._artifact_storage = value
+
+
+    @property
+    def description(self) -> str | None:
+        """Returns the properly formatted class docstring."""
+        if not self.__doc__:
+            return None
+        return inspect_module.cleandoc(self.__doc__)
+
+
+
+
     def run(self, result_state: ExecutorState) -> PresenterResponse:
         return self.process_task_results(result_state)
 
@@ -1349,6 +1380,7 @@ class PresenterComponent4:
             task_result=task_result,
             context_text=context_text,
         )
+        print(sub_instructions.model_dump(), flush=True)
 
         ui_items: list[UIItem] = []
 
@@ -1391,7 +1423,7 @@ class PresenterComponent4:
 
         for task_result in execution_state.get("task_results", []):
 
-            print("Processing task result from agent:", task_result)
+            print("Processing task result from agent:", task_result.task_id)
             ui_task_items = self.process_single_task_result(
                 task_result
             )
@@ -1521,11 +1553,11 @@ class PresenterComponent4:
         data_result: DataFrameResult,
         instruction: str,
     ) -> UIItem:
-        df = pd.DataFrame( data_result.records ) # it musty arrive here as rows, records.
+        df = pd.DataFrame( data_result.records, columns=data_result.columns ) # it musty arrive here as rows, records.
         nrows, ncols = df.shape
 
         print("Processing dataframe result with shape:", df.shape)
-        print( df )
+        #print( df )
 
         if nrows <= 2 and ncols <= 2:
         #if nrows <= 5 and ncols <= 5:

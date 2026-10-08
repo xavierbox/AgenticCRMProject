@@ -9,7 +9,7 @@ sys.path.append("../../")  # Add the parent directory to the Python path
 from agentic_system.common.base_task import DataFrameResult
 from agentic_system.components.coordinator_graph import OuterExecutor
 from agentic_system.components.planner import * 
-from agentic_system.components.direct_answer import * 
+from agentic_system.components.direct_answer.direct_answer import * 
 from agentic_system.components.results_interpreter import * 
 from agentic_system.common.get_llm import azure_llm_if
 from agentic_system.components.planner.planner import get_default_planner

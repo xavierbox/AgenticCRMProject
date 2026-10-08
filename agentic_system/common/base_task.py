@@ -17,7 +17,7 @@ class DataFrameResult(BaseModel):
     description: str | None = None
     #dataframe: Any
     records: Any 
-
+    columns: list[str] | None = None
 
 
 class TaskResult(BaseModel):
@@ -37,6 +37,13 @@ class TaskResult(BaseModel):
 
     agent: str = Field(
         description="Name of the agent/component that executed the task."
+    )
+
+    task_id: str | None =  Field(
+        default=None,
+        description=(
+            "Unique identifier for this task"
+        ),
     )
 
     instruction: str = Field(
@@ -72,8 +79,40 @@ class TaskResult(BaseModel):
 class TableItemAgentResponse(BaseModel):
     table_name: str = Field(description="Name of a materialized output table")
     description: str = Field(description="Brief summary of the table contents")
- 
+
 class AgentTableResponse(BaseModel):
+    agent: Literal["analyst"] = Field(
+        default="analyst",
+        description="The role of the agent. Always 'analyst'.",
+    )
+
+    clarification: Optional[str] = Field(
+        default=None,
+        description="A follow-up question when clarification is needed.",
+    )
+
+    user_query: str = Field(
+        description="Sanitized user query.",
+    )
+
+    text: str = Field(
+        default="",
+        description=(
+            "Direct textual answer to the user's question. "
+            "Do not repeat table descriptions here. "
+            "Leave empty when the answer is fully provided by the tables."
+        ),
+    )
+
+    tables: List[TableItemAgentResponse] = Field(
+        default_factory=list,
+        description=(
+            "List of table references answering the query. "
+            "Leave empty for text-only answers or clarification questions."
+        ),
+    )
+
+class old_AgentTableResponse(BaseModel):
     # Literal ensures the LLM chooses only these specific strings
     agent: Literal["analyst"] = Field(
         default="analyst", 

@@ -1,0 +1,80 @@
+
+
+from typing import Any, Literal
+
+
+class WellConstraints: 
+
+    per_well: bool = False
+    per_well_limits: dict[ str, list[float]] | None = None 
+
+    def get_limits( self, well_names ): 
+        pass 
+
+class FacilityConstraints: 
+
+    rate_limits: list[float] | None = [ 0.0, 1_500_000] 
+
+    def get_limits( self ): 
+        pass 
+
+    def set_limits( self, min, max ):
+        pass 
+
+class PFMConfig:
+
+    pass 
+
+
+class PFMObject:
+
+    injector_well_constraints: WellConstraints  = WellConstraints() 
+    producer_well_constraints: WellConstraints  = WellConstraints() 
+    facilities_constraints: FacilityConstraints = FacilityConstraints() 
+
+    run_mode : Literal[ 'vrr', 'ie' ] = 'ie'
+
+    last_change = {}
+
+    simulation_results: Any | None = None 
+
+    def compute_facility_limits( self ):
+
+        if self.run_mode == 'vrr':
+            pass 
+        
+        if self.run_mode == 'ie':
+            pass 
+        
+        # return minimum, maximum 
+        
+ 
+    def restart( self ):
+        pass 
+
+
+    def return_ui_widget( self ):
+        pass 
+
+
+    def create_well_list( self, candidate_well_names: list[str]|None = None  ):
+        pass 
+
+    def print_well_list( self ):
+        pass 
+
+    def run_pfm( self ):
+        pass 
+
+
+    def set_max_injector_rates( self,  max_inj_rate, candidate_well_names: list[str]|None = None):
+        pass
+
+    def set_min_injector_rates( self,  max_inj_rate, candidate_well_names: list[str]|None = None):
+        pass
+
+    def set_max_facilities_rates( self,  max_inj_rate, candidate_well_names: list[str]|None = None):
+        pass
+  
+    def set_min_facilities_rates( self,  max_inj_rate, candidate_well_names: list[str]|None = None):
+        pass

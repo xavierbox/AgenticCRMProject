@@ -29,6 +29,8 @@ class PlannerComponent(Generic[TPlan]):
     Use this tool to generate a plan. 
     """
 
+    agent_name = "planner"
+
     def __init__(self, llm: Any,  
                  config: PlannerConfig, 
                  plan_model: type[TPlan]
@@ -38,6 +40,25 @@ class PlannerComponent(Generic[TPlan]):
         self.config = config 
         self.llm = llm
         self.plan_model = plan_model
+        self.last_plan = None 
+
+
+    def as_tool(self) -> StructuredTool:
+        """Expose the planner as a LangChain tool."""
+
+        def generate_plan(query: str) -> str:
+            plan = self.run(user_query=query)
+            return plan.model_dump_json(indent=2)
+
+        return StructuredTool.from_function(
+            func=generate_plan,
+            name=self.agent_name,
+            description=self.description or (
+                "Generate an execution plan for the user query, "
+                "including task IDs, responsible agents, and dependencies."
+            ),
+        )
+
 
     @property
     def prompt(self) -> str|None:
@@ -49,9 +70,14 @@ class PlannerComponent(Generic[TPlan]):
         if not self.__doc__:
             return None
         return inspect.cleandoc(self.__doc__)
+
+
+
         
     def run(self, user_query: str,previous_state = None ) -> TPlan:
-        return self.plan( user_query,previous_state  )
+        plan = self.plan( user_query,previous_state  )
+        self.last_plan = plan 
+        return plan 
 
     def plan(self, user_query: str, previous_state = None) -> TPlan:
 

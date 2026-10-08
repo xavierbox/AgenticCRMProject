@@ -13,7 +13,7 @@ from langchain_core.messages import HumanMessage, AIMessage
 
 from agentic_system.common.base_plan import ExecutorState
 from agentic_system.common.base_task import ExecutionTask, TaskExecutionContext, TaskResult, TextResult
-from agentic_system.components.direct_answer import DirectAnswerComponent
+from agentic_system.components.direct_answer.direct_answer import DirectAnswerComponent
 
 
 class OuterExecutor:

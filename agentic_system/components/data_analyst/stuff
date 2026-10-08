@@ -1,0 +1,164 @@
+@dataclass 
+class DataAnalystConfig:
+    
+    prompt_template :str = anayst_prompt_template
+    prompt: str | None = None     
+    use_structured_output : bool | None = False 
+
+
+
+
+class DataAnalyst:
+    """Specialized in quantitative analysis of the input data. 
+    Use this tool to answer questions about the data, perform calculations, and provide insights based on the data.
+    """
+    agent_name = "data_analyst"
+
+    _artifact_storage: dict[str, TaskResult]|None = None
+
+    @property
+    def artifact_storage(self):
+        return self._artifact_storage
+    
+    @artifact_storage.setter
+    def artifact_storage(self, value):
+        self._artifact_storage = value
+
+
+    @property
+    def description(self) -> str | None:
+        """Returns the properly formatted class docstring."""
+        if not self.__doc__:
+            return None
+        return inspect.cleandoc(self.__doc__)
+
+
+    def set_data( self, tables:Any, metadata:Any):
+        self._smart_data.set_data( tables, metadata )
+    
+    def update_data(self, tables:Any):
+        self._smart_data.update_data( tables )
+
+    def clear( self ):
+        self._smart_data.clear() 
+
+
+    def __init__(
+            self,
+            llm: Any,
+            smart_data: SmartData | None = None,
+            config: DataAnalystConfig | None = None,
+            smart_tools: SmartDataTools | None = None, 
+            domain_tools: BaseDomainTools | None = None 
+        ):
+
+        raise NotImplementedError("A simpler analyst was implemented")
+        self.llm = llm
+        self._smart_data = smart_data if smart_data is not None else SmartData()
+        self.config = config if config is not None else DataAnalystConfig()
+
+        self.tools_object = smart_tools if smart_tools is not None else SmartDataTools()#self._smart_data)
+        self.tools_object.set_data_component( self._smart_data )
+        self.domain_tools = domain_tools 
+        self.tools = self.tools_object.get_tools()
+
+        if not domain_tools is None :
+            self.tools = self.tools + self.domain_tools.get_agent_tools() # type: ignore
+
+
+
+
+    def build_prompt( self ):#, few_shot_examples = None , background = None ):
+        '''
+        builds the data_analyst prompt using all the semantics + 
+        few_shot examples if any and background info if any
+        '''
+
+        # the prompt is built with the semantic models for the data
+        # the semantic constrains, idiom  = duckdb and any other embelishment 
+
+
+        return "formatted prompt"  
+
+
+                                    
+    def run(
+        self,
+        query: str,
+        messages: list[AnyMessage] | None = None,
+        context: TaskExecutionContext | None = None,
+    ) -> TaskResult:
+        """Return fixed demo results without calling an LLM."""
+        #answer = (
+        #    "The forecated amount of oil is 2231.22 with a VRRR of 1.2"
+        #)
+
+        prompt = self.build_prompt() 
+
+        agent = create_agent(
+            model=self.llm,
+            system_prompt = prompt,
+            tools=self.tools,
+            #response_format=ToolStrategy(AgentTableResponse),
+        )
+
+        return TaskResult(
+            agent=self.agent_name,
+            instruction=query,
+            cheap_output='answer',
+            raw_results=[
+                {
+                    "demo": True,
+                    "producer": "P1",
+                    "supporting_injectors": [
+                        {"injector": "I1", "gain": 0.38},
+                        {"injector": "I2", "gain": 0.30},
+                    ],
+                }
+            ],
+            data_results=[
+                TextResult(
+                    text='answer',
+                    role="answer",
+                )
+            ],
+        )
+
+        return None
+
+
+ 
+
+def get_data_analyst_as_structured_tool() -> StructuredTool:
+    """
+    Returns a DataAnalyst instance that can be used as a structured tool in LangChain.
+    This tool answers questions about the data, performs calculations, and provides insights.
+    """
+    analyst =  DataAnalyst()
+    description = analyst.description 
+
+    # Create the executable wrapper function on the fly
+    def wrapper_analyst(query: str, task_result_ids: list[str] | None = None):# -> str:
+        
+        context = analyst.build_context_from_task_ids(task_result_ids)
+        task_result = analyst.run(query,context=context)
+        return task_result#.cheap_output or "No output produced."
+
+
+    tool = StructuredTool.from_function(
+                    func = wrapper_analyst,
+                    name = "data_analyst",
+                    description = description,
+                )
+    return tool 
+
+def test_component():
+    analyst = DataAnalyst()
+    result = analyst.run(query="Test query")
+    return result 
+
+def test_component_as_tool():
+    tool = get_data_analyst_as_structured_tool()
+    result = tool.invoke({"query": "Test query"})
+    return result 
+

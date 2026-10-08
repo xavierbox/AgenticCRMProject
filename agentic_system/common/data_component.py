@@ -2,7 +2,9 @@
 import inspect
 import sys
 import pprint
+import json
 
+from time import perf_counter
 sys.path.append("./")  # Add the parent directory to the Python path
 sys.path.append("../")  # Add the parent directory to the Python path
 sys.path.append("../../")  # Add the parent directory to the Python path
@@ -877,10 +879,14 @@ class SmartDataTools(BaseDomainTools[SmartData]):
         """
         Records the execution plan. Does NOT affect execution.
         """
+      
+        
         print("\n===== PLAN (TOOL) =====")
         print(plan)
         print("=======================\n")
+         
         return "OK"
+    
 
     def format_catalog_snapshot(self, snapshot: CatalogTablesSnapshot) -> str:
         def clean(obj):
@@ -900,8 +906,7 @@ class SmartDataTools(BaseDomainTools[SmartData]):
 
             return obj
         
-        import json
-
+       
         lines = []
 
         def format_tables(title: str, tables: list[TableCard] | None):
@@ -944,10 +949,14 @@ class SmartDataTools(BaseDomainTools[SmartData]):
 
             lines.append("")
 
+
+        print( "[format_catalog_snapshot]")
         #format_tables("BASE TABLES", snapshot.base_tables)
         #format_tables("DERIVED TABLES", snapshot.derived_tables)
         format_tables(" ", snapshot.base_tables)
         format_tables(" ", snapshot.derived_tables)
+
+        print( '[*format_catalog_snapshot]')
         return "\n".join(lines).strip()
 
     def catalog_snapshot(
@@ -984,24 +993,30 @@ class SmartDataTools(BaseDomainTools[SmartData]):
         # GET STRUCTURED SNAPSHOT
         # =====================================================
 
+        print( ['catalog_snapshot'])
+
         snapshot = self._data_component.catalog_snapshot(input_tables)
         #print(snapshot)
         return self.format_catalog_snapshot( snapshot )
 
     def _get_table_names( self ):
         """Returns the table names"""
+        
         return  self._data_component.get_table_names() 
     
     def get_tables_creation_datetime( self )-> Dict[str,str]  :
         """Returns the creation date of each table"""
+        print( ['get_tables_creation_datetime'])
         return self._data_component.get_tables_creation_datetime()
         
     def get_tables_brief_description( self ):
         """Returns a brief textual description of the tables"""
+        print( ['get_tables_brief_description'])
         return self._data_component.get_tables_brief_description() 
 
     def get_single_table_brief_description( self, table_name:str ):
         """Returns a brief textual description of a single table"""
+        print( ['get_single_table_brief_description'])
         return self._data_component.get_single_table_brief_description( table_name )  
 
     def materialize_select( self, table_name, rows )->str:
@@ -1009,6 +1024,8 @@ class SmartDataTools(BaseDomainTools[SmartData]):
         Return a full table to produce a textual response. 
         **Do not call this tool ** unless the table has less than 20 rows
         """
+
+        print( ['materialize_select'])
         #return self._conn.execute(f'SELECT * FROM "{table_name}"').fetchdf()
         if not table_name:
             return "table_name cannot be empty"
@@ -1046,6 +1063,7 @@ class SmartDataTools(BaseDomainTools[SmartData]):
         """
         retries = 0 
 
+        print("[sql_materialize]")
         try:
             df_result = self._data_component.execute_sql(sql)#, detailed_table_description)
             self._data_component.register_derived_table( df_result, materialized_table_name, detailed_table_description)
@@ -1077,6 +1095,8 @@ class SmartDataTools(BaseDomainTools[SmartData]):
 
     def reuse_derived_table(self, derived_table_name:str, table_description:str):
         """Call this function to reuse a **derived** table present in the catalog."""
+
+        print("[reuse_derived_table]")
 
         if derived_table_name in self._get_table_names():
             return f"Table {derived_table_name} is in the catalog and can be reused.\ndescription: {table_description} "
