@@ -30,7 +30,7 @@ Important:
 - The name of generated tables and columns should reflect the table contents  
 
 - Use lowercase snake_case for table names and column names 
-    Example 1: yearly_aggregated_oil_producer_per_subzone
+    Example 1: yearly_aggregated_oil_producedr_per_subzone
     Example 2: gas_oil_water_cummulated_volumes 
 
 - Be explicit in the detailed description of tables produced 

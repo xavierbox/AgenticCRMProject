@@ -458,7 +458,9 @@ class InputDataAnalyst:
                     )
                 )
 
-                if df.shape[0] < 10 and df.shape[1] < 4:
+                #if df.shape[0] < 10 and df.shape[1] < 4:
+                if df.shape[0] <= 20  * df.shape[1] <= 6:
+                                   
                     cheap_parts.append(
                         f"Table `{table_name}` contents:\n{df.to_string(index=False)}"
                     )

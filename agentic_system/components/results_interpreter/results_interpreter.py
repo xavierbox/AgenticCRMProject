@@ -513,10 +513,23 @@ class ResultsInterpreterComponent:
         self.domain_tools = tools or ResultsInterpreterTools()
         self.domain_tools.set_data_component( self.data_component )
         self.agent = None 
+        self._project_name = None 
+
 
     agent_name = "results_interpreter"
 
     _artifact_storage: dict[str, TaskResult]|None = None
+
+    
+    @property
+    def project_name( self ):
+        return self.project_name 
+
+    @project_name.setter
+    def project_name(self, value):
+        self._project_name = value
+
+
 
     @property
     def artifact_storage(self):
