@@ -6,10 +6,9 @@ from langchain.agents import create_agent
 from langchain_core.runnables import RunnableLambda
 import os 
 from langchain_openai import AzureChatOpenAI
-print('imported')
+#import dataiku 
 
-
-def azure_llm_if(imodel:str|None=None,iazure_endpoint:str|None=None,
+def laptop_azure_llm_if(imodel:str|None=None,iazure_endpoint:str|None=None,
                  ideployment:str|None=None, iapi_version:str|None=None,):
 
     endpoint = iazure_endpoint or os.environ['AZURE_OPENAI_ENDPOINT']
@@ -37,3 +36,18 @@ def azure_llm_if(imodel:str|None=None,iazure_endpoint:str|None=None,
      
     return llm 
 
+ 
+def dataiku_azure_llm_if( llm_id:str = "azureopenai:if-digital:gpt-4.1" ):   
+    client = dataiku.api_client()
+    project = client.get_default_project()
+    #llm_id = 'azureopenai:production_genai:gpt-4.1'
+    #llm_id = 'azureopenai:production_genai:gpt-4.1'
+    #llm_id = "azureopenai:if-digital:gpt-4o" #payload['llm_id']
+    #llm_id= "azureopenai:if-digital:gpt-4.1"
+    #print('Initializing isolated Dataiku-LangChain model with precise configurations...')
+    # Pass model parameters inside the model_kwargs dictionary block 
+    # to keep the top-level parameters clear for Pydantic
+    llm = DKUChatModel(llm_id = llm_id, temperature=0.0, top_p = 1.0)
+    return llm 
+
+azure_llm_if = laptop_azure_llm_if

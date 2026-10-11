@@ -59,7 +59,6 @@ class InputDataAnalyst:
     def artifact_storage(self, value):
         self._artifact_storage = value
 
-
     def as_tool(self) -> StructuredTool:
         """Expose the analyst with dependency retrieval and result storage."""
 
@@ -106,9 +105,7 @@ class InputDataAnalyst:
                 "The result is stored under task_id for subsequent tasks."
             ),
         )
-
-
-        
+ 
     def catalog_snapshot(self, input_tables: None | str | Iterable[str] = None) -> CatalogTablesSnapshot:
         return self._smart_data.catalog_snapshot(input_tables)
 
@@ -479,8 +476,12 @@ class InputDataAnalyst:
                         data_results=data_results,
         )
         
+def get_default_analyst( llm ):
+    analyst = InputDataAnalyst( llm , config = InputDataAnalystConfig() )
+    #analyst.update_data( {'injectors':inj,'producers':prod, 'locations':locs } )
+    return analyst
 
-def get_default_analyst():
+def get_default_analyst1():
     inj, prod,locs =get_default_data()
     print( inj.head(4))
     print( prod.head(4))

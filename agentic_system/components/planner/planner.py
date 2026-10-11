@@ -25,8 +25,7 @@ class PlannerConfig:
 
 class PlannerComponent(Generic[TPlan]):
     """Generates a structured execution plan for the user query. 
-    The plan contains be a list of tasks, each with a unique task_id, an agent responsible for executing it, and any dependencies on other tasks. 
-    Use this tool to generate a plan. 
+    The plan contains be a list of tasks, each with a unique task_id, an agent responsible for executing it, and any dependencies on other tasks. Use this tool to generate a plan. 
     """
 
     agent_name = "planner"

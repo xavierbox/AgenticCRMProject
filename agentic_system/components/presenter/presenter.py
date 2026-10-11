@@ -1,8 +1,11 @@
 import sys
 from uuid import uuid4
-
+import json
+import textwrap
 #from yaml 
 import warnings as warnings_module
+import json
+import textwrap
 
 sys.path.append("./")  # Add the parent directory to the Python path
 sys.path.append("../")  # Add the parent directory to the Python path
@@ -1368,7 +1371,85 @@ class PresenterComponent4:
 
         return structured_llm.invoke(messages)
 
+
+
     def process_single_task_result(
+        self,
+        task_result: TaskResult,
+    ) -> list[UIItem]:
+        # Collect the UI items produced for this task.
+        ui_items: list[UIItem] = []
+
+        # Keep tables separately because they need presentation planning.
+        table_results: list[DataFrameResult] = []
+
+        for data_result in task_result.data_results:
+
+            if isinstance(data_result, TextResult):
+                # Display the complete text directly.
+                # No instruction splitting or additional LLM call is needed.
+                ui_items.append(
+                    self._make_text_item(data_result)
+                )
+
+            elif isinstance(data_result, DataFrameResult):
+                # Defer tables until we decide how to present them.
+                table_results.append(data_result)
+
+            else:
+                # Report unsupported artifact types.
+                ui_items.append(
+                    self._make_error_item(
+                        task_result,
+                        data_result,
+                    )
+                )
+
+        # A text-only task is finished here.
+        if not table_results:
+            return ui_items
+
+        # Create a temporary copy containing only table artifacts.
+        # Preserve the original instruction and other task information.
+        # The original TaskResult is not modified.
+        table_task_result = task_result.model_copy(
+            update={"data_results": table_results}
+        )
+
+        # Describe the available tables to the presentation LLM.
+        # source_map lets us retrieve the actual artifact by its source ID.
+        context_text, source_map = self.build_task_result_context(
+            table_task_result
+        )
+
+        # Ask which table should answer each relevant part of the instruction.
+        sub_instructions = self.get_subinstructions(
+            task_result=table_task_result,
+            context_text=context_text,
+        )
+
+        for item in sub_instructions.items:
+            # Retrieve the table selected by the LLM.
+            source = source_map[item.source_id]
+
+            if not isinstance(source, DataFrameResult):
+                raise TypeError(
+                    f"Expected a dataframe source for '{item.source_id}'."
+                )
+
+            # Use the existing logic to present this table
+            # as text, a table, or a chart.
+            ui_items.append(
+                self._process_dataframe(
+                    source,
+                    item.sub_instruction,
+                )
+            )
+
+        return ui_items
+
+
+    def old_process_single_task_result(
         self,
         task_result: TaskResult,
     ) -> list[UIItem]:
@@ -1384,10 +1465,18 @@ class PresenterComponent4:
 
         ui_items: list[UIItem] = []
 
+        #patch 1
+        presented_text_sources: set[str] = set()
+
         for item in sub_instructions.items:
             source = source_map[item.source_id]
 
             if item.kind == "text":
+
+                #patch 1
+                if item.source_id in presented_text_sources:
+                    continue
+
                 ui_items.append(
                     self._make_text_item(source)
                 )
@@ -1407,6 +1496,9 @@ class PresenterComponent4:
         execution_state: ExecutorState,
     ) -> PresenterResponse:
         ui_items: list[UIItem] = []
+
+        #patch, same text source is repeated!
+        presented_text_sources: set[str] = set()
 
         clarification_request = execution_state.get(
             "clarification_request"
@@ -1657,6 +1749,59 @@ class PresenterComponent4:
 
         return json.loads(text)
     
+
+
+
+def print_presenter_response(
+    presenter_response,
+    width: int = 90,
+) -> None:
+    """Print presenter items in a readable terminal format."""
+
+    print(f"\nUI item count: {len(presenter_response.items)}")
+
+    for index, item in enumerate(presenter_response.items, start=1):
+        print("\n" + "=" * width)
+        print(f"{index}. {item.type.upper()} | {item.id}")
+
+        if item.title:
+            print(item.title)
+
+        print("-" * width)
+
+        if item.type == "text":
+            text = item.data.get("text", "")
+
+            # Preserve line breaks and wrap long lines.
+            for line in text.splitlines():
+                if line.strip():
+                    print(
+                        textwrap.fill(
+                            line,
+                            width=width,
+                            subsequent_indent="    ",
+                            break_long_words=False,
+                            break_on_hyphens=False,
+                        )
+                    )
+                else:
+                    print()
+
+        elif item.type in {"question", "error"}:
+            print(
+                json.dumps(
+                    item.data,
+                    indent=2,
+                    ensure_ascii=False,
+                    default=str,
+                )
+            )
+
+        else:
+            # Summarize charts/tables instead of dumping large figures.
+            print("Data fields:", ", ".join(item.data))
+
+    print()
 
 
 
