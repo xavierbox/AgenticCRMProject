@@ -1272,13 +1272,17 @@ class PresenterComponent4:
         self,
         data_result: TextResult,
     ) -> UIItem:
+        # Missing, None, or blank titles become None.
+        title = getattr(data_result, "title", None)
+        title = title.strip() if isinstance(title, str) else None
+
         return UIItem(
             id=f"text_{uuid4().hex[:8]}",
             type="text",
-            title=None,
+            title=title or None,
             data={"text": data_result.text},
         )
-
+    
     def _make_error_item(
         self,
         task_result: TaskResult,

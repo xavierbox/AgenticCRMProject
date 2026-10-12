@@ -224,7 +224,7 @@ class ReactSystem:
 
         presentation_state: ExecutorState = {
             #"messages": self.response["messages"], # type: ignore
-            "user_query": query,
+            "user_query": self.query or "",
             "plan": None,
             "task_index_to_execute": 0,
             "task_results": list(current_task_results.values()),
@@ -277,17 +277,17 @@ if __name__ == "__main__":
     agent.set_analyst_data( {'injectors':inj,'producers':prod, 'locations':locs } )
 
 
-
+    query = "Explain the concept of VRR"
     response =  agent.run( query )
     print( response )
+    print()
+    #import time
+    #print("Starting pause...")
+    #time.sleep(2) 
+    #print("awake")
 
-    import time
-    print("Starting pause...")
-    time.sleep(2) 
-    print("awake")
-
-    response =  agent.run( query )
-    print( response )
-    print() 
+    #response =  agent.run( query )
+    #print( response )
+    #print() 
 
 

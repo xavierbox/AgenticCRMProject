@@ -42,6 +42,7 @@ class UIState(BaseModel):
             #print(f"setting {name} to {value}")
             setattr(self, name, value)
        
+
 def prepare_data_for_interpreter( crm_results):# project_name, study_name ):
     
 
@@ -82,9 +83,29 @@ def prepare_data_for_interpreter( crm_results):# project_name, study_name ):
         return df 
 
 
-    columns = ['INJECTOR','PRODUCER','ALLOCATION','PRODUCER_ALLOCATION'] 
+    columns = ['INJECTOR','PRODUCER','ALLOCATION','PRODUCER_ALLOCATION', 'DISTANCE'] 
     
     df_connectivity= crm_results['crm_liquid_parameters'][ columns ].rename( columns = {'ALLOCATION':'GAIN'} ).copy()
+    gain = df_connectivity["GAIN"]
+    eligible = gain[gain >= 0.05]
+
+    low_cut, high_cut = eligible.quantile([1 / 3, 2 / 3])
+
+    def classify_gain(x):
+        if pd.isna(x):
+            return "unknown"
+        if x < 0.05:
+            return "negligible"
+        if x <= low_cut:
+            return "low"
+        if x <= high_cut:
+            return "moderate"
+        return "high"
+
+    df_connectivity["GAIN_CLASS"] = gain.apply(classify_gain)
+    
+ 
+            
     ####
     
     columns = ['PRODUCER','CORRELATION','VARIANCE_RATIO','QUALITY_SCORE']#,'QUALITY_CLASS'] 
@@ -110,6 +131,11 @@ def prepare_data_for_interpreter( crm_results):# project_name, study_name ):
     df_producer.drop( ['PRODUCER'], axis = 1, inplace=True)
     df_producer.rename( columns = {'PRODUCTIVITY':'pressure_coefficient','LO':'primary_depletion_coefficient'}, inplace=True)
     ###
+    
+    
+    print('Returing connectivity table as ')
+    print( df_connectivity.sample(10) )
+    
     
     
     return df_connectivity, df_quality, df_producer 

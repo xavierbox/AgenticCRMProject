@@ -9,15 +9,44 @@ from pydantic import BaseModel, Field
 from pydantic import BaseModel, Field
 
 class TextResult(BaseModel):
-    text: str
-    role: str = "answer"
+    text: str = Field(
+        description="Textual answer or explanation to present to the user."
+    )
+    role: str = Field(
+        default="answer",
+        description="Purpose of the text, such as an answer or explanation."
+    )
+    title: str | None = Field(
+        default=None,
+        description=(
+            "Optional concise heading describing the text's main topic. "
+            "Used as the title of the corresponding UI item."
+        ),
+    )
+
 
 class DataFrameResult(BaseModel):
-    table_name: str
-    description: str | None = None
-    #dataframe: Any
-    records: Any 
-    columns: list[str] | None = None
+    table_name: str = Field(
+        description="Name identifying the table artifact."
+    )
+    description: str | None = Field(
+        default=None,
+        description="Brief explanation of the table's contents and purpose."
+    )
+    records: Any = Field(
+        description=(
+            "Table rows as a list of dictionaries, typically produced "
+            "with dataframe.to_dict(orient='records')."
+        )
+    )
+    columns: list[str] | None = Field(
+        default=None,
+        description=(
+            "Optional ordered column names. Preserves table headers when "
+            "records is empty; otherwise columns can be inferred from records."
+        ),
+    )
+
 
 
 class TaskResult(BaseModel):

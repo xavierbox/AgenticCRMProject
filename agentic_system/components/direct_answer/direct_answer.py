@@ -345,27 +345,39 @@ class DirectAnswerComponent:
             })
 
         """
-        response = self.llm.invoke(llm_messages)
-        answer = response.content
+        #response = self.llm.invoke(llm_messages)
+        #answer = response.content
 
-        
-        if not isinstance(answer, str):
-            raise TypeError("DirectAnswerComponent expects response.content to be a string.")
-
-        print(f"Time in seconds [direct answer] {perf_counter() - started:.2f}s", flush=True)
+        # Ask the LLM to generate both the answer and its heading.
+        structured_llm = self.llm.with_structured_output(TextResult)
+        text_result = structured_llm.invoke(llm_messages)
 
         return TaskResult(
             agent=self.agent_name,
             instruction=query,
-            cheap_output=answer,
-            raw_results=[answer],
-            data_results=[
-                TextResult(
-                    text=answer,
-                    role="answer",
-                )
-            ],
+            cheap_output=text_result.text,
+            raw_results=[text_result],
+            data_results=[text_result],
         )
+
+        
+        #if not isinstance(answer, str):
+        #    raise TypeError("DirectAnswerComponent expects response.content to be a string.")
+
+        #print(f"Time in seconds [direct answer] {perf_counter() - started:.2f}s", flush=True)
+
+        #return TaskResult(
+        #    agent=self.agent_name,
+        #    instruction=query,
+        #    cheap_output=answer,
+        #    raw_results=[answer],
+        #    data_results=[
+        #        TextResult(
+        #            text=answer,
+        #            role="answer",
+        #        )
+        #    ],
+        #)
 
 def get_default_direct_answer(llm: Any) -> DirectAnswerComponent:
     return DirectAnswerComponent(llm=llm)

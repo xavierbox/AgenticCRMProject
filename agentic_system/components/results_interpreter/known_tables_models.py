@@ -9,7 +9,7 @@ interpreter_semantic_catalog = {
                 "CRM injector-producer connectivity results. "
                 "Each row represents one modeled injector-producer pair."
             ),
-            "kind": "derived",
+            "kind": "base",
             "columns": [
                 {
                     "name": "INJECTOR",
@@ -32,7 +32,7 @@ interpreter_semantic_catalog = {
                     ),
                 },
                 {
-                    "name": "PALLOCATION",
+                    "name": "PRODUCER_ALLOCATION",
                     "data_type": "float",
                     "description": (
                         "Producer allocation: fraction of the producer's total "
@@ -54,6 +54,13 @@ interpreter_semantic_catalog = {
                         "implemented when this table was generated."
                     ),
                 },
+                {
+                    "name": "DISTANCE",
+                    "data_type": "float",
+                    "description": "Distance between injector and producer",
+                },
+                
+                
             ],
             "relationships": [
                 {
@@ -95,7 +102,7 @@ interpreter_semantic_catalog = {
                 "Producer-level CRM history-match quality metrics. "
                 "Each row represents one producer model."
             ),
-            "kind": "derived",
+            "kind": "base",
             "columns": [
                 {
                     "name": "PRODUCER",
@@ -159,7 +166,7 @@ interpreter_semantic_catalog = {
                 "production-support decomposition. "
                 "Each row represents one producer."
             ),
-            "kind": "derived",
+            "kind": "base",
             "columns": [
                 {
                     "name": "PRODUCER",
@@ -210,6 +217,29 @@ interpreter_semantic_catalog = {
                         "pressure changes."
                     ),
                 },
+
+                {
+                    "name": "TAU",
+                    "data_type": "float",
+                    "description": (
+                        "Producer-level time constant governing the modeled response "
+                        "to injection support. All injector connections to this producer "
+                        "share this response timescale. Smaller values indicate faster "
+                        "response; larger values indicate slower response. "
+                        "It is not an injector-producer-specific travel time."
+                    ),
+                },
+                {
+                    "name": "TAUP",
+                    "data_type": "float",
+                    "description": (
+                        "Producer-level time constant governing the modeled decay of "
+                        "the primary-depletion contribution. Smaller values indicate "
+                        "faster decay; larger values indicate more persistent depletion "
+                        "contribution."
+                    ),
+                },
+
                 {
                     "name": "pressure_coefficient",
                     "data_type": "float",
@@ -350,19 +380,37 @@ interpreter_semantic_context = {
             "A highly connected injector-producer relationship is "
             "characterized primarily by high GAIN."
         ),
+
+
+
+
         (
-            "When TAU is available, a fast-response relationship is "
-            "characterized by low TAU."
+            "TAU is producer-centric. Low TAU indicates a fast modeled response "
+            "to injection support for the producer, not a uniquely fast "
+            "injector-producer connection."
         ),
         (
-            "When TAU is available, high GAIN together with low TAU should "
-            "be highlighted as a strong and fast connection and may be "
-            "flagged as a potential channeling candidate."
+            "High GAIN to a producer with low TAU indicates strong modeled "
+            "support to a fast-responding producer. It does not establish "
+            "a pair-specific travel time or prove channeling."
         ),
         (
-            "Do not diagnose channeling solely from high GAIN or solely "
-            "from low TAU. Prefer conclusions supported by multiple indicators."
+            "TAUP describes the persistence of the primary-depletion contribution. "
+            "Interpret it together with the magnitude of that contribution."
         ),
+        (
+            "Joining producer_model_table to connectivity_table repeats TAU and "
+            "TAUP across connections. These repetitions are not independent "
+            "producer observations."
+        ),
+
+
+
+
+
+
+
+
         (
             "A poorly supported producer may be characterized by few or "
             "no meaningful injector connections together with low "
@@ -437,3 +485,6 @@ interpreter_semantic_context = {
         ),
     ],
 }
+
+
+
