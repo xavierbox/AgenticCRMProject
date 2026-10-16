@@ -59,6 +59,7 @@ class InputDataAnalyst:
     def artifact_storage(self, value):
         self._artifact_storage = value
 
+
     def as_tool(self) -> StructuredTool:
         """Expose the analyst with dependency retrieval and result storage."""
 
@@ -160,6 +161,11 @@ class InputDataAnalyst:
         if not domain_tools is None :
             self.tools = self.tools + self.domain_tools.get_agent_tools() # type: ignore
 
+    def update_data(self, tables:Any):
+        self._smart_data.clear()#update_data( tables )
+        metadata =  {t.name:t for t in self.config.semantic_catalog.tables}
+        self._smart_data.set_data( tables, metadata)
+ 
     def _build_prompt( self ):
 
         prompt = self.config.prompt_template.format(idiom = self.config.idiom, 
@@ -167,11 +173,6 @@ class InputDataAnalyst:
                                     constraints = self.config.constraints)
 
         return prompt 
-
-    def update_data(self, tables:Any):
-        self._smart_data.clear()#update_data( tables )
-        metadata =  {t.name:t for t in self.config.semantic_catalog.tables}
-        self._smart_data.set_data( tables, metadata)
 
     def build_context_from_task_ids(
         self,
@@ -207,7 +208,6 @@ class InputDataAnalyst:
         )
 
 
-    
     def old_build_context_from_task_ids(self,task_ids:list[str]|None=None):
 
         # fetch from artifact storage the task ids 
@@ -459,7 +459,7 @@ class InputDataAnalyst:
                 )
 
                 #if df.shape[0] < 10 and df.shape[1] < 4:
-                if df.shape[0] <= 20  * df.shape[1] <= 6:
+                if df.shape[0]  * df.shape[1] <= 20*6:
                                    
                     cheap_parts.append(
                         f"Table `{table_name}` contents:\n{df.to_string(index=False)}"
@@ -477,6 +477,7 @@ class InputDataAnalyst:
                         raw_results=raw_results,
                         data_results=data_results,
         )
+
         
 def get_default_analyst( llm ):
     analyst = InputDataAnalyst( llm , config = InputDataAnalystConfig() )

@@ -1552,6 +1552,9 @@ class PresenterComponent4:
             )
         )
 
+        #print("This is the prompt for a very small table")
+        #print( prompt )
+
         response = self.llm.invoke(prompt)
 
         text_output = (

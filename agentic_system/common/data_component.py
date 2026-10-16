@@ -655,19 +655,28 @@ class SmartData(BaseDataComponent):
         self.conn.close()
         self.conn= duckdb.connect()
 
-    def clear_derived( self ):
+    def list_derived( self ):
         derived_table_names = [
             name
             for name, card in self._catalog.tables.items()
             if card.kind == 'derived'
         ]
 
+        return derived_table_names
+
+    def clear_table_names( self, derived_table_names ):
         for name in derived_table_names:
             try:
                 self.conn.unregister(name)
             except duckdb.CatalogException:
                 pass
             self._catalog.tables.pop(name, None)
+
+
+
+    def clear_derived( self ):
+        derived_table_names = self.list_derived()
+        self.clear_table_names( derived_table_names )
 
     def sanitize_df(self, df):
 
@@ -693,7 +702,7 @@ class SmartData(BaseDataComponent):
                     df[col] = converted
 
         return df
-    
+
     def set_data( self, data:Any, metadata:Any|None = None)->Self:
         # ADict[str,pd.DataFrame], metadata : dict[str,TableCard]|None=None):
 
@@ -709,7 +718,6 @@ class SmartData(BaseDataComponent):
 
         return Self  # type: ignore
     
-
     def update_data(self, raw_data: Any | None = None) -> Self:
 
         super().update_data(raw_data)
@@ -959,6 +967,7 @@ class SmartDataTools(BaseDomainTools[SmartData]):
         print( '[*format_catalog_snapshot]')
         return "\n".join(lines).strip()
 
+
     def catalog_snapshot(
         self,
         input_tables: None | str | Iterable[str] = None
@@ -999,6 +1008,7 @@ class SmartDataTools(BaseDomainTools[SmartData]):
         #print(snapshot)
         return self.format_catalog_snapshot( snapshot )
 
+
     def _get_table_names( self ):
         """Returns the table names"""
         
@@ -1022,7 +1032,7 @@ class SmartDataTools(BaseDomainTools[SmartData]):
     def materialize_select( self, table_name, rows )->str:
         """
         Return a full table to produce a textual response. 
-        **Do not call this tool ** unless the table has less than 20 rows
+        **Do not call this tool ** unless the table has less than 50 rows
         """
 
         print( ['materialize_select'])
@@ -1048,6 +1058,7 @@ class SmartDataTools(BaseDomainTools[SmartData]):
         limit = min(20, int(rows))
         return self._data_component.conn.execute(f'SELECT * FROM "{safe_name}" LIMIT {limit}').fetchdf().to_string()
 
+
     def sql_materialize( self, sql:str, materialized_table_name:str, detailed_table_description:str ):
         """
         materialize a table by executing sql and stores it in the database as a 'derived' table.  
@@ -1063,7 +1074,7 @@ class SmartDataTools(BaseDomainTools[SmartData]):
         """
         retries = 0 
 
-        print("[sql_materialize]")
+        print("[sql_materialize]",materialized_table_name)
         try:
             df_result = self._data_component.execute_sql(sql)#, detailed_table_description)
             self._data_component.register_derived_table( df_result, materialized_table_name, detailed_table_description)
@@ -1093,6 +1104,7 @@ class SmartDataTools(BaseDomainTools[SmartData]):
                     )
             return error_msg
 
+
     def reuse_derived_table(self, derived_table_name:str, table_description:str):
         """Call this function to reuse a **derived** table present in the catalog."""
 
@@ -1102,6 +1114,8 @@ class SmartDataTools(BaseDomainTools[SmartData]):
             return f"Table {derived_table_name} is in the catalog and can be reused.\ndescription: {table_description} "
         else:
             return f"Table {derived_table_name} **IS NOT in the catalog** and **CANNOT** be reused. "
+
+
 
 
 class MockDataDrivenStorage:

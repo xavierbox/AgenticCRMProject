@@ -1,7 +1,12 @@
 
 import inspect as inspect_module
 import sys
+from pathlib import Path
+
 from time import perf_counter
+from pydantic import BaseModel, Field
+from typing import List, Literal, Optional
+from langchain.agents.structured_output import ToolStrategy
 
 sys.path.append("./")  # Add the parent directory to the Python path
 sys.path.append("../")  # Add the parent directory to the Python path
@@ -10,7 +15,7 @@ sys.path.append("../../")  # Add the parent directory to the Python path
 from langchain_core.messages import HumanMessage, AIMessage, AnyMessage
 from langchain_core.tools import StructuredTool
 
-from agentic_system.common.base_task import DataFrameResult, TaskExecutionContext, TaskResult, TextResult
+from agentic_system.common.base_task import DataFrameResult, TableItemAgentResponse, TaskExecutionContext, TaskResult, TextResult
 from agentic_system.common.get_llm import azure_llm_if
 from agentic_system.components.results_interpreter.semantic_context import ResultsInterpreterSemanticContext
 
@@ -23,11 +28,11 @@ from dataclasses import dataclass
 import sys, pprint, pandas as pd , os, json, re, plotly.io as pio 
 from pathlib import Path
 from typing_extensions import Self
-from typing import Any, cast
+from typing import Any, Optional, cast
 
 from agentic_system.common.get_llm import azure_llm_if as get_llm
 from agentic_system.components.results_interpreter.prompts import RESULTS_INTERPRETER_PROMPT_TEMPLATE
-from agentic_system.common.data_component import BaseDataComponent, BaseDomainTools
+from agentic_system.common.data_component import BaseDataComponent, BaseDomainTools, SmartData, SmartDataTools
 from agentic_system.common.semantic_models import ColumnCard, SemanticCatalog, SemanticContext, TableCard
 
 
@@ -177,7 +182,7 @@ class ResultsInterpreterTools(BaseDomainTools[ResultsInterpreterData]):
     def raw_data(self) -> Any:
         return self.data_component.raw_data
 
-    def get_connectivity_table(
+    def _get_connectivity_table(
         self,
         producer_names: list[str] | None = None,
         injector_names: list[str] | None = None,
@@ -243,7 +248,7 @@ class ResultsInterpreterTools(BaseDomainTools[ResultsInterpreterData]):
         print("*[get_connectivity_table]")
         return df.to_dict(orient='records')# df.copy()
 
-    def get_simulation_quality_table(
+    def _get_simulation_quality_table(
         self,
         producer_names: list[str] | None = None,
     ) -> list[dict[str, Any]]:#pd.DataFrame:
@@ -289,7 +294,7 @@ class ResultsInterpreterTools(BaseDomainTools[ResultsInterpreterData]):
         print("[*get_simulation_quality_table]")
         return df.to_dict(orient='records')#copy()
 
-    def get_producer_model_table(
+    def _get_producer_model_table(
         self,
         producer_names: list[str] | None = None,
     ) -> list[dict[str, Any]]:
@@ -351,7 +356,7 @@ class ResultsInterpreterTools(BaseDomainTools[ResultsInterpreterData]):
         print("[*get_producer_model_table]")
         return df.to_dict(orient='records')# df.copy()
 
-    def get_injector_summary(
+    def _get_injector_summary(
         self,
         injector_names: list[str] | None = None,
     ) -> list[dict[str, Any]]:
@@ -437,16 +442,56 @@ class ResultsInterpreterTools(BaseDomainTools[ResultsInterpreterData]):
         print("[*get_injector_summary]")
         return df.to_dict( orient = 'records' )
     
-    def _excecute_sql(self, instruction:str):
+    def excecute_sql(self, instruction:str)->str:
         """
-        Retrieve info from one or more tables.
-        You can use this tool as a pre-processing tool to perform 
-        aggregations, filtering and joining of the known 
-        tables to produce an additional table for further analysis.
+        You can use this tool as a pre-processing tool to perform aggregations, filtering and joining of the known 
+        tables to generate and store in the catalog one or more additional tables for further analysis or plotting.
+        This tool does not retrieve data. 
+        """
+        print("\n-----SQL instruction------\n", instruction )
+        #return f"Table 'aaa' and 'bbb' where produced for instruction {instruction}"
+        #return "sql execution failed, use another tool."
+        return "Generated table and stored it in the catalog. The table contains columns: GAIN (float), TAU (float)"
+
+    def plot_tool( self, table_name:str)->str:
+        """
+        The tool produces and stores a representation of one or more tables for later plotting using downstream agents.
+        You can use this tool when the user wants a chart.
+        """
+        print("\n-----called plot tool with instruction------\n", table_name )
+        #return "Data needed for plotting was stored in table 'plot1' and 'plot2' "
+        return "Generated plot from table name " + table_name 
+    
+    def fetch_data_to_analyse_tool( self, table_names:list[str])->str:
+        """
+        Returns a textual interpretation of one of more tables for further analysys.
+        Call this tool before attempting to interpret one or more tables to be analyzed. 
         
+        Parameters
+        ----------
+        table_names:
+            list of table names to fetch data from before interpretation, summarization.
+
         """
-        print("-----SQL instruction------\n", instruction )
-        return "sql execution failed, use another tool."
+                
+        print("\n-----called analyset tool with instruction------\n", table_names )
+        return 'connectivity is good and simulation quality was excellent'
+
+    def get_table_description( self, table_name: str )->str:
+        """
+        Returns a description of the table, including a description of its columns, meaning, size.
+        Call this tool to assess whether a particular table contains the information required     
+        """
+
+        return f"table {table_name} contains all the required information"
+
+    def record_plan(self, plan )->str:
+        """
+        records the plan
+        """
+        print(plan)
+        return "plan recorded. "
+
 
 @dataclass 
 class ResultsInterpreterConfig( ):
@@ -463,7 +508,6 @@ class ResultsInterpreterConfig( ):
     semantic_context:ResultsInterpreterSemanticContext = ResultsInterpreterSemanticContext.model_validate(interpreter_semantic_context)
     constraints: str = "\n".join(semantic_catalog.semantic_constraints)
     idiom:str  = 'duckdb'
-
 
 
 class ResultsInterpreterComponent:
@@ -485,21 +529,7 @@ class ResultsInterpreterComponent:
     Hypothetical scenario evaluation, such as shutting wells or changing injection
     rates, is outside the scope of this component.
     """
-    __xx__x= """
-    Parameters
-    ----------
-    llm
-        Language model used for interpretation and response generation.
 
-    config : ResultsInterpreterConfig, optional
-        Component configuration.
-
-    data : ResultsInterpreterData, optional
-        Simulation result data and semantic metadata.
-
-    tools : ResultsInterpreterTools, optional
-        Domain tools used to retrieve and analyze simulation results.
-    """
 
     def __init__(self, 
                  llm, 
@@ -523,7 +553,7 @@ class ResultsInterpreterComponent:
     
     @property
     def project_name( self ):
-        return self.project_name 
+        return self._project_name 
 
     @project_name.setter
     def project_name(self, value):
@@ -761,6 +791,8 @@ class ResultsInterpreterComponent:
         self.data_component.set_data(raw_data, metadata)
         return self
 
+    
+
     def _build_agent(self, prompt):
 
         self.agent  = None 
@@ -976,6 +1008,31 @@ class ResultsInterpreterComponent:
         )
 
 
+class ResultsInterpreterConfig2( ):
+    prompt_template: str | None = RESULTS_INTERPRETER_PROMPT_TEMPLATE 
+    use_memory : bool = False 
+    structured_output : Any | None = None 
+
+    idiom_context:str   = '- date subtraction: Use column - INTERVAL \'X days/months\'. NEVER use DATE_SUB() or DATEADD().\n- date truncation: Use DATE_TRUNC(\'month\', column).\n- reserved keywords: Always wrap the column name "DATE" in double quotes to avoid Binder Errors.\n- string concatenation: Use the || operator or CONCAT().\n- boolean aggregation: Use FILTER clauses or BOOL_OR() / BOOL_AND() for cleaner logic.\n- nested aggregates: Avoid nested aggregates—never wrap MAX/MIN inside SUM/AVG/etc. Example: WITH current_year AS (SELECT EXTRACT(YEAR FROM MAX("DATE")) AS year FROM injectors), yearly_totals AS (...), yoy AS (...) SELECT ... FROM ... WHERE YEAR = (SELECT year FROM current_year)\n- cte helpers: Use CTEs to capture helper scalars (like current_year via MAX("DATE")) before performing group aggregations. For example:\n    WITH current_year AS (SELECT EXTRACT(YEAR FROM MAX("DATE")) AS year FROM injectors),\n         yearly_totals AS (...),\n         yoy AS (...)\n    SELECT ... FROM ... WHERE YEAR = (SELECT year FROM current_year)\n'
+    
+    #constraints and table models 
+    semantic_catalog:SemanticCatalog = SemanticCatalog.model_validate(interpreter_semantic_catalog)
+    
+    #interpretation context 
+    semantic_context:ResultsInterpreterSemanticContext = ResultsInterpreterSemanticContext.model_validate(interpreter_semantic_context)
+    constraints: str = "\n".join(semantic_catalog.semantic_constraints)
+    idiom:str  = 'duckdb'
+
+#class InputDataAnalystConfig:
+#    constraints:str     = "- WELL_TYPE domain is restricted to exactly two values: 'Injector' and 'Producer'.\n- Each well belongs to exactly one WELL_TYPE category (mutually exclusive).\n- Well identifiers are stored in NAME and used consistently as join keys across tables.\n- injectors.NAME joins to locations.NAME only for rows where locations.WELL_TYPE = 'Injector'.\n- producers.NAME joins to locations.NAME only for rows where locations.WELL_TYPE = 'Producer'.\n- All volume measures are non-negative (WATER_INJECTION_VOLUME, LIQUID_VOLUME, WATER_VOLUME, OIL_VOLUME, GAS_VOLUME).\n- Production balance constraint: LIQUID_VOLUME is approximately WATER_VOLUME + OIL_VOLUME + GAS_VOLUME (allowing small numerical tolerance).\n- If YEAR, MONTH, DAY are present, they should match the corresponding DATE components.\n"
+#    idiom_context:str   = '- date subtraction: Use column - INTERVAL \'X days/months\'. NEVER use DATE_SUB() or DATEADD().\n- date truncation: Use DATE_TRUNC(\'month\', column).\n- reserved keywords: Always wrap the column name "DATE" in double quotes to avoid Binder Errors.\n- string concatenation: Use the || operator or CONCAT().\n- boolean aggregation: Use FILTER clauses or BOOL_OR() / BOOL_AND() for cleaner logic.\n- nested aggregates: Avoid nested aggregates—never wrap MAX/MIN inside SUM/AVG/etc. Example: WITH current_year AS (SELECT EXTRACT(YEAR FROM MAX("DATE")) AS year FROM injectors), yearly_totals AS (...), yoy AS (...) SELECT ... FROM ... WHERE YEAR = (SELECT year FROM current_year)\n- cte helpers: Use CTEs to capture helper scalars (like current_year via MAX("DATE")) before performing group aggregations. For example:\n    WITH current_year AS (SELECT EXTRACT(YEAR FROM MAX("DATE")) AS year FROM injectors),\n         yearly_totals AS (...),\n         yoy AS (...)\n    SELECT ... FROM ... WHERE YEAR = (SELECT year FROM current_year)\n'
+#    semantic_catalog:SemanticCatalog = SemanticCatalog.model_validate(inj_prod_locs_semantic_catalog)
+#    prompt_template:str = input_data_anayst_prompt_template
+#    idiom:str  = 'duckdb'
+#    use_structured_output : bool | None = True 
+
+
+
 def get_default_results_interpreter( llm ):
 
     default_config = ResultsInterpreterConfig() 
@@ -987,8 +1044,6 @@ def get_default_results_interpreter( llm ):
 
     return component  
  
-        
-
 def get_results_interpreter_as_structured_tool() -> StructuredTool:
     """
     Returns a ResultsInterpreterComponent instance that can be used as a structured tool in LangChain.
@@ -1343,7 +1398,7 @@ def prepare_test_data( ) :
 
 
 
-    return raw_data, metadata
+    return raw_data, metadata, semantic_catalog, semantic_context
 
 def test_basic_data():
     raw_data, metadata = prepare_test_data()
@@ -1401,8 +1456,328 @@ def test_basic_tools():
     print(pair_subset)
     print() 
 
+def prepare_test_data2( ) :
+    import io
+    import pandas as pd
+
+    c = """
+    INJECTOR	PRODUCER PALLOCATION	GAIN	GAIN_CLASS  DISTANCE 
+    0	I1	P1	0.508456	0.38   meaningful   612 
+    1	I2	P1	0.432001	0.30   meaningful   700 
+    2	I3	P1	0.007279	0.001  negligible   875            
+    3	I1	P2	0.463442	0.4    meaningful   750
+    4	I3	P2	0.226982	0.15   meaningful   814
+    """
+    q = """	PRODUCER	CORRELATION	VARIANCE_RATIO	QUALITY_SCORE	QUALITY_CLASS   
+    0	P1	0.802377	0.929430	0.864767	good   
+    1	P2	0.929300	1.324738	0.886701	good   
+    2	P3	0.754035	1.020565	0.833949	good     
+    3	P4	0.925126	1.205418	0.917859	good    
+    """
+    p = """
+    PRODUCER  current_produced_water_fraction  current_produced_oil_fraction  current_volume_liquid_produced  current_liquid_production_due_to_depletion  current_liquid_production_due_to_injection  current_liquid_production_due_to_pressure  pressure_coefficient  total_allocation  number_supporting_injectors  TAU  TAUP  LO
+    0   P1    0.72  0.28  1200.0  420.0   660.0  120.0  0.18  0.55  2  4.5   120.0  0.35
+    1   P2    0.35  0.65   950.0  570.0   285.0   95.0  0.10  0.30  2  12.0  240.0  0.60
+    2   P3    0.88  0.12   700.0  140.0   490.0   70.0  0.22  0.70  1  1.4   450.0  0.20
+    3   P4    0.20  0.80  1500.0  1050.0  300.0  150.0  0.08  0.20  0  28.0  800.0  0.75
+    """
 
 
+    # Read the string into a DataFrame
+    # 'sep=r"\s+"' handles any whitespace (tabs or multiple spaces)
+    # 'index_col=0' uses the first column (0, 1, 2...) as the row index
+    connectivity_table  = pd.read_csv(io.StringIO(c), sep=r"\s+", index_col=0)
+    simulation_quality_table = pd.read_csv(io.StringIO(q), sep=r"\s+", index_col=0)
+    producer_model_table = pd.read_csv(io.StringIO(p), sep=r"\s+", index_col=0)
+
+
+    print(connectivity_table)
+    print(simulation_quality_table)
+    print(producer_model_table.T)
+
+
+    raw_data = {
+        "connectivity_table": connectivity_table,
+        "simulation_quality_table": simulation_quality_table,
+        "producer_model_table": producer_model_table,
+    }
+
+    semantic_catalog = SemanticCatalog(
+
+        tables=[
+
+            TableCard(
+                name="connectivity_table",
+                description=(
+                    "CRM injector-producer connectivity results. "
+                    "Each row represents one modeled injector-producer pair."
+                ),
+                kind="derived",
+                row_count=len(connectivity_table),
+                columns=[
+                    ColumnCard(
+                        name="INJECTOR",
+                        data_type="string",
+                        description="Injector well name (source)."
+                    ),
+                    ColumnCard(
+                        name="PRODUCER",
+                        data_type="string",
+                        description="Producer well name (sink)."
+                    ),
+                    ColumnCard(
+                        name="GAIN",
+                        data_type="float",
+                        description="Fraction of water injected in the injector that is recovered as liquid production in the producer. GAIN is denoted as G_{ij}. This is the -gain- of production due to injection. This controls the strength of support from injector (i) to producer (p)"
+                    ),
+                    ColumnCard(
+                        name="PALLOCATION",
+                        data_type="float",
+                        description=(
+                            "This is the -Producer allocation-. It is the fraction of the producer's total liquid production "
+                            "attributed to injection from this injector. The sum of the producer allocation for each producer must be less than 1. The "
+                            "total liquid production of a producer includes contributions from all injectors connected to the producer, the producer "
+                            "production due to pressure changes and the liquid production due to primary depletion "
+                        )
+                    ),
+                    ColumnCard(
+                        name="GAIN_CLASS",
+                        data_type="string",
+                        description="Categorical interpretation of GAIN. GAIN < 0.05 is negligible. GAIN in [0.05-0.15] is low. GAIN > 0.7 is high. For a given"
+                        
+
+                    ),
+                ],
+            ),
+
+            TableCard(
+                name="simulation_quality_table",
+                description=(
+                    "Producer-level CRM history-match quality metrics. "
+                    "Each row represents one producer model."
+                ),
+                kind="derived",
+                row_count=len(simulation_quality_table),
+                columns=[
+                    ColumnCard(
+                        name="PRODUCER",
+                        data_type="string",
+                        description="Producer well name."
+                    ),
+                    ColumnCard(
+                        name="CORRELATION",
+                        data_type="float",
+                        description=(
+                            "Correlation between observed and simulated liquid "
+                            "production time series."
+                        )
+                    ),
+                    ColumnCard(
+                        name="VARIANCE_RATIO",
+                        data_type="float",
+                        description=(
+                            "Ratio between simulated and observed production variance."
+                        )
+                    ),
+                    ColumnCard(
+                        name="QUALITY_SCORE",
+                        data_type="float",
+                        description=(
+                            "Composite CRM history-match quality metric from 0 to 1. "
+                            "Higher values indicate better model quality."
+                        )
+                    ),
+                    ColumnCard(
+                        name="QUALITY_CLASS",
+                        data_type="string",
+                        description="Categorical interpretation of model quality."
+                    ),
+                ],
+            ),
+
+            TableCard(
+                name="producer_model_table",
+                description=(
+                    "Current producer-level production state and modeled "
+                    "production-support decomposition."
+                ),
+                kind="derived",
+                row_count=len(producer_model_table),
+                columns=[
+                    ColumnCard(
+                        name="PRODUCER",
+                        data_type="string",
+                        description="Producer well name."
+                    ),
+                    ColumnCard(
+                        name="current_produced_water_fraction",
+                        data_type="float",
+                        description="Current fraction of produced liquid that is water. Also named -water cut-"
+                    ),
+                    ColumnCard(
+                        name="current_produced_oil_fraction",
+                        data_type="float",
+                        description="Current fraction of produced liquid that is oil."
+                    ),
+                    ColumnCard(
+                        name="current_volume_liquid_produced",
+                        data_type="float",
+                        description="Latest observed liquid production."
+                    ),
+                    ColumnCard(
+                        name="current_liquid_production_due_to_depletion",
+                        data_type="float",
+                        description="Recent liquid production attributed to depletion."
+                    ),
+                    ColumnCard(
+                        name="current_liquid_production_due_to_injection",
+                        data_type="float",
+                        description="Recent liquid production attributed to injection."
+                    ),
+                    ColumnCard(
+                        name="current_liquid_production_due_to_pressure",
+                        data_type="float",
+                        description="Recent liquid production attributed to pressure changes."
+                    ),
+                    ColumnCard(
+                        name="pressure_coefficient",
+                        data_type="float",
+                        description=(
+                            "CRM-P productivity coefficient: derivative of liquid "
+                            "production with respect to bottom-hole pressure."
+                        )
+                    ),
+                    ColumnCard(
+                        name="total_allocation",
+                        data_type="float",
+                        description=(
+                            "Sum of PALLOCATION over all injectors connected "
+                            "to this producer."
+                        )
+                    ),
+                    ColumnCard(
+                        name="number_supporting_injectors",
+                        data_type="integer",
+                        description=(
+                            "Number of injectors having non-negligible GAIN "
+                            "to this producer."
+                        )
+                    ),
+                ],
+            ),
+        ],
+
+        semantic_constraints=[
+            "GAIN and PALLOCATION have different physical meanings and must not be used interchangeably.",
+            "GAIN is injector-centric.",
+            "PALLOCATION is producer-centric.",
+            "GAIN below 0.05 is considered negligible.",
+            "For a balanced simulation, the sum of GAIN across producers for an injector must be <= 1.",
+            "The sum of PALLOCATION across injectors for a producer must be <= 1.",
+            "Produced water fraction and produced oil fraction must sum to 1.",
+        ],
+    )
+
+
+    semantic_context = ResultsInterpreterSemanticContext(
+
+        definitions=[
+            (
+                "A producer is supported when one or more injectors have "
+                "non-negligible GAIN to that producer."
+            ),
+            (
+                "An injector supports producers when it has non-negligible "
+                "GAIN to one or more producers."
+            ),
+            (
+                "Injector utility is related to the sum of GAIN across the "
+                "producers supported by that injector."
+            ),
+        ],
+
+        business_rules=[
+            "GAIN < 0.05 is negligible.",
+            (
+                "A high-utility injector supports one or more producers and "
+                "has total GAIN across producers approaching 1 in a balanced model."
+            ),
+            (
+                "Model quality should be considered when assessing confidence "
+                "in producer-level interpretations."
+            ),
+        ],
+
+        domain_knowledge=[
+            (
+                "A producer may be supported by injection while only a small "
+                "fraction of its total liquid production is due to injection."
+            ),
+            (
+                "Total producer liquid production may contain contributions "
+                "from injection, depletion, and pressure changes."
+            ),
+            (
+                "total_allocation measures the fraction of producer liquid "
+                "production attributable to all modeled injectors combined."
+            ),
+        ],
+    
+        interpretation_guidelines= [
+            "Do not simply repeat table values. Identify patterns, extremes, rankings, anomalies and combinations of metrics that provide useful interpretation.",
+            
+            "Distinguish between direct observations, model interpretations and diagnostic hypotheses. Do not present a hypothesis as a confirmed physical mechanism.",
+            
+            "For injector-focused questions, examine GAIN, injector utility, number of supported producers and the distribution of connectivity across producers.",
+            "For producer-support questions, examine number_supporting_injectors, total_allocation, PALLOCATION and the modeled injection-production contribution.",
+            
+            "A highly connected injector-producer relationship is characterized primarily by high GAIN.",
+            
+            "A fast-response relationship is characterized by low TAU.",
+            
+            "High GAIN together with low TAU should be highlighted as a strong and fast connection and may be flagged as a potential channeling candidate.",
+            
+            "Do not diagnose channeling solely from high GAIN or solely from low TAU. Prefer conclusions supported by multiple indicators.",
+            
+            "A poorly supported producer may be characterized by few or no meaningful injector connections together with low total_allocation.",
+            
+            "A well-supported producer may have several meaningful injector connections and/or a substantial fraction of its production allocated to injection.",
+            
+            "A producer whose modeled injection contribution is the largest production component should be described as injection-dominated.",
+            
+            "A producer whose depletion contribution is the largest production component should be described as depletion-dominated.",
+            
+            "A producer whose pressure contribution is the largest production component should be described as pressure-dominated.",
+            
+            "When identifying underutilized or potentially stranded injectors, look for low injector utility and few meaningful producer connections. If actual injection rate information is unavailable, describe the conclusion as low modeled utilization rather than definitively calling the injector operationally stranded.",
+            
+            "For quantities without established absolute thresholds, such as unusually large TAU, TAUP or pressure_coefficient, compare wells relative to the population in the current simulation rather than inventing fixed thresholds.",
+            
+            "Always consider simulation quality when interpreting CRM parameters. Strong connectivity or unusual parameter values associated with poorly matched producers should be reported with reduced confidence.",
+            
+            "For broad summary requests, synthesize findings across tables rather than summarizing each table independently.",
+            
+            "For a broad simulation summary, actively identify the strongest and weakest injectors, well-supported and poorly supported producers, dominant production drivers, unusual response behavior, possible diagnostic signals and model-quality issues.",
+            
+            "Prioritize findings supported by several independent metrics.",
+            
+            "Do not enumerate every producer or injector unless the user explicitly requests an exhaustive listing.",
+            
+            "Scenario evaluation, such as predicting the impact of shutting an injector or changing injection rates, is outside the scope of this interpreter."
+        ]
+            
+    )
+
+
+    metadata = {
+        "semantic_catalog": semantic_catalog,
+        "semantic_context": semantic_context,
+    }
+
+
+
+
+    return raw_data, metadata, semantic_catalog, semantic_context
 
 def hard_coded_semantics( self ):
 
@@ -1673,26 +2048,35 @@ def hard_coded_semantics( self ):
             
     )
 
-if __name__ == "__main__":
 
+def test1():
     llm = get_llm()
     interpreter = get_default_results_interpreter( llm )
+
+    raw_data, metadata, semantic_catalog, semantic_context = prepare_test_data()
+    interpreter.update_data( raw_data )
+
 
     #raw_data = {
     #    "connectivity_table": connectivity_table,
     #    "simulation_quality_table": simulation_quality_table,
     #    "producer_model_table": producer_model_table,
     #}
-    raw_data, _ = prepare_test_data()
-    interpreter.update_data( raw_data )
+
     #print( raw_data.keys() )
     
+    query=(
+        "which are the top 5 best supported producers?"
+        #"""interpert the connectivity but ignore from the data negligible gains. Then plot GAIN vs distance for non-negligible gains"""
+        #"filter out negligible gains and interpret the connectivities observed. Plot GAIN vs Tau for those "
+        #"Show GAIN versus TAU for non-negligible connections. "
+        #"Is there any correlation between GAIN and Tau? Can you spot anomalous combinations. What further investigations could I do to rule out channneling?. Think hard in the last question and consider that i basically only have rates and well locations and maybe pressure at the producers"
 
+    )
 
-    response = interpreter.run("Is there any correlation between GAIN and Tau? Can you spot anomalous combinations. What further investigations could I do to rule out channneling?. Think hard in the last question and consider that i basically only have rates and well locations and maybe pressure at the producers")
+    response = interpreter.run( query )
     print(response.data_results[0])
 
-    from pathlib import Path
 
     text = response.data_results[0]
 
@@ -1708,6 +2092,16 @@ if __name__ == "__main__":
     print(f"Saved to: {path.resolve()}")
 
     print()
+
+
+def test_this_as_an_analyst_extended():
+
+
+    print("done")
+
+if __name__ == "__main__":
+
+    test1()
 
 
     #interpreter = ResultsInterpreterComponent( llm = llm )
