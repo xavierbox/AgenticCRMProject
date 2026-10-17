@@ -47,10 +47,6 @@ interpreter_semantic_catalog = {
                     "data_type": "string",
                     "description": (
                         "Categorical interpretation of GAIN. "
-                        "GAIN < 0.05 is negligible; "
-                        "GAIN in [0.05, 0.15] is low; "
-                        "GAIN > 0.7 is high. "
-                        "Other categories depend on the classification "
                         "implemented when this table was generated."
                     ),
                 },
@@ -287,7 +283,7 @@ interpreter_semantic_catalog = {
     ],
     "semantic_constraints": [
         (
-            "GAIN and PALLOCATION have different physical meanings and "
+            "GAIN and PRODUCER ALLOCATION have different physical meanings and "
             "must not be used interchangeably."
         ),
         "GAIN is injector-centric.",
@@ -298,7 +294,7 @@ interpreter_semantic_catalog = {
             "for an injector must be <= 1."
         ),
         (
-            "The sum of PALLOCATION across injectors for a producer "
+            "The sum of PRODUCER ALLOCATION across injectors for a producer "
             "must be <= 1."
         ),
         (
@@ -329,6 +325,12 @@ interpreter_semantic_context = {
             "Injector utility is related to the sum of GAIN across the "
             "producers supported by that injector."
         ),
+        (
+            "injector efficiency is the ratio of the total attributable oil produced "
+            "as result of the injection to the total water injected"
+        ),
+         (" producer efficiency is the ratio of the total oil produced at a given producer p to its total liquid production"
+         )
     ],
     "business_rules": [
         "GAIN < 0.05 is negligible.",
@@ -354,6 +356,16 @@ interpreter_semantic_context = {
             "total_allocation measures the fraction of producer liquid "
             "production attributable to all modeled injectors combined."
         ),
+
+        (  "simulations can be ran in 2 modes: balanced and unbalanced. In the former, "
+           "the gain is unconstrained and sum_p{GAIN_ip} can exceed the value of 1, which isnt physically possible. "
+           "This is done sometimes in diagnostic simulations. "
+           "balanced simulations guarantee that sum_p{GAIN_ip} < 1. In this case mass conservation is enforced"
+        ),
+        (
+            "simulations can be ran with or without pressure information."
+        )
+
     ],
     "interpretation_guidelines": [
         (
@@ -373,17 +385,13 @@ interpreter_semantic_context = {
         ),
         (
             "For producer-support questions, examine "
-            "number_supporting_injectors, total_allocation, PALLOCATION "
+            "number_supporting_injectors, total_allocation, PRODUCER ALLOCATION "
             "and the modeled injection-production contribution."
         ),
         (
             "A highly connected injector-producer relationship is "
             "characterized primarily by high GAIN."
         ),
-
-
-
-
         (
             "TAU is producer-centric. Low TAU indicates a fast modeled response "
             "to injection support for the producer, not a uniquely fast "
@@ -391,8 +399,9 @@ interpreter_semantic_context = {
         ),
         (
             "High GAIN to a producer with low TAU indicates strong modeled "
-            "support to a fast-responding producer. It does not establish "
-            "a pair-specific travel time or prove channeling."
+            "support to a fast-responding producer. It might indicate Channeling  but "
+            "more analysis needs to be performed"
+            ""
         ),
         (
             "TAUP describes the persistence of the primary-depletion contribution. "
@@ -474,15 +483,8 @@ interpreter_semantic_context = {
             "Do not enumerate every producer or injector unless the user "
             "explicitly requests an exhaustive listing."
         ),
-        (
-            "Scenario evaluation, such as predicting the impact of shutting "
-            "an injector or changing injection rates, is outside the scope "
-            "of this interpreter."
-        ),
-        (
-            "Do not infer response speed or use TAU-based diagnostic "
-            "criteria when TAU is unavailable."
-        ),
+
+
     ],
 }
 

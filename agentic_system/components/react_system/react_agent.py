@@ -20,16 +20,15 @@ from agentic_system.common.get_llm import azure_llm_if as get_llm
 
 from agentic_system.components.react_system.prompts import react_prompt_template
 from agentic_system.components.planner.planner import get_default_planner
-from agentic_system.components.results_interpreter.results_interpreter import ResultsInterpreterComponent, get_default_results_interpreter, prepare_test_data
 import pprint
 import inspect 
 import importlib.metadata
 
 from agentic_system.components.direct_answer.direct_answer import get_default_direct_answer
 from agentic_system.components.data_analyst.input_data_analyst import *
-from agentic_system.components.results_interpreter.results_interpreter import ResultsInterpreterComponent, get_default_results_interpreter, prepare_test_data
-
+from agentic_system.components.results_interpreter.results_analyst import ResultsAnalyst, get_default_results_analyst
 from agentic_system.components.presenter.presenter import * 
+
 
 
 def task_result_to_text( task_result:TaskResult )->str:
