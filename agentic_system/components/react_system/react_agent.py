@@ -326,7 +326,7 @@ class ReactSystem:
         presentation_state: ExecutorState = {
             #"messages": self.response["messages"], # type: ignore
             "user_query": self.query or "",
-            "plan": None,
+            "plan": None if not self.plan else self.plan,
             "task_index_to_execute": 0,
             "task_results": list(current_task_results.values()),
             "cheap_tool_outputs": [

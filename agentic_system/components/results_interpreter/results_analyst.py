@@ -39,12 +39,12 @@ from agentic_system.components.results_interpreter.known_tables_models import (
 from agentic_system.components.results_interpreter.prompts import RESULTS_ANALYST_PROMPT_TEMPLATE
 from agentic_system.components.results_interpreter.semantic_context import ResultsInterpreterSemanticContext
 
-
+from langchain.agents.structured_output import ToolStrategy
 @dataclass
 class ResultsAnalystConfig( ):
     prompt_template: str | None = RESULTS_ANALYST_PROMPT_TEMPLATE
     use_memory : bool = False
-    structured_output : bool = False
+    structured_output : bool = True
     max_num_derived_tables: int = 10
 
     idiom_context:str   = '- date subtraction: Use column - INTERVAL \'X days/months\'. NEVER use DATE_SUB() or DATEADD().\n- date truncation: Use DATE_TRUNC(\'month\', column).\n- reserved keywords: Always wrap the column name "DATE" in double quotes to avoid Binder Errors.\n- string concatenation: Use the || operator or CONCAT().\n- boolean aggregation: Use FILTER clauses or BOOL_OR() / BOOL_AND() for cleaner logic.\n- nested aggregates: Avoid nested aggregates—never wrap MAX/MIN inside SUM/AVG/etc. Example: WITH current_year AS (SELECT EXTRACT(YEAR FROM MAX("DATE")) AS year FROM injectors), yearly_totals AS (...), yoy AS (...) SELECT ... FROM ... WHERE YEAR = (SELECT year FROM current_year)\n- cte helpers: Use CTEs to capture helper scalars (like current_year via MAX("DATE")) before performing group aggregations. For example:\n    WITH current_year AS (SELECT EXTRACT(YEAR FROM MAX("DATE")) AS year FROM injectors),\n         yearly_totals AS (...),\n         yoy AS (...)\n    SELECT ... FROM ... WHERE YEAR = (SELECT year FROM current_year)\n'
@@ -1176,8 +1176,8 @@ class ResultsAnalyst:
             model=self.llm,
             system_prompt = prompt,
             tools=self.tools,
-            # response_format=ToolStrategy(ResultsAnalystFinalResponse) if self.config.structured_output else None
-            response_format=None,
+            response_format=ToolStrategy(ResultsAnalystFinalResponse) if self.config.structured_output else None
+            #response_format=None,
         )
         if self.agent is None:
             raise ValueError("Agent was not initialized properly.")
