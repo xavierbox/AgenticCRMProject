@@ -1265,7 +1265,6 @@ class ResultsAnalyst:
                 "=======================",
                 flush=True,
             )
-            print(self.task_result, flush=True)
             return self.task_result
 
 
@@ -1289,7 +1288,6 @@ class ResultsAnalyst:
             "=======================",
             flush=True,
         )
-        print(self.task_result, flush=True)
         return self.task_result
 
 
@@ -1342,15 +1340,7 @@ if __name__ == "__main__":
             #"Is there any evidence of channelling?"
         )
 
-    print(100*'+')
-    print(100*'+')
-    print(100*'+')
-
     task_result = x.run( query )
 
 
     print_task_result( task_result )
-
-
-    print(100*'=')
-    print(100*'=')

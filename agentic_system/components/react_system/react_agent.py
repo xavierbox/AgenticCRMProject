@@ -59,10 +59,6 @@ def get_as_structured_tool(initialized_component, depends_on: list[str]|None = N
     def wrapper_func(query: str) :
         task_result =  initialized_component.run(query)
         to_return =  task_result_to_text( task_result ) 
-
-        print(100*'=')
-        print( to_return)
-        print(100*'+')
              
         return to_return
 
@@ -85,10 +81,6 @@ def get_planner_as_structured_tool(initialized_component) -> StructuredTool:
     def wrapper_func(query: str) :
         plan = initialized_component.run(query)
         to_return = f"Plan:\n{plan.model_dump_json(indent=2)}"
-
-        print(100*'=')
-        print( to_return )
-        print(100*'*')
 
                 
         return to_return
@@ -180,7 +172,6 @@ class ReactSystem:
                 "=======================".format(elapsed),
                 flush=True,
             )
-            print(response, flush=True)
             return response
         
         elapsed = perf_counter() - started
@@ -191,7 +182,6 @@ class ReactSystem:
             "=======================".format(elapsed),
             flush=True,
         )
-        print(response, flush=True)
         return response 
 
     def run_with_deterministic_executor(
@@ -242,7 +232,6 @@ class ReactSystem:
                 "=====================================".format(elapsed),
                 flush=True,
             )
-            print(response, flush=True)
             return response
 
         elapsed = perf_counter() - started
@@ -253,7 +242,6 @@ class ReactSystem:
             "=====================================".format(elapsed),
             flush=True,
         )
-        print(plan, flush=True)
         return plan
 
     def _run_task_deterministic(self, task):
@@ -389,7 +377,7 @@ if __name__ == "__main__":
     #query="""Make a summary of the quality of the simulations and show in a pie chart  
     #the percent of the total production of all the wells combined that is due to injectionm, pressure and primary depletion"""
 
-    #query="""from the simulation results show in a bar chart the percent of the total production of all the wells combined that is due to injection, pressure and primary depletion"""
+    query="""from the simulation results show in a pie chart the percent of the total production of all the wells combined that is due to injection, pressure and primary depletion"""
 
     #query="""Can you show in a bar chart the percent of production volumes currently (oil, gas and water)
     #from the data in the simulation results? 
@@ -400,26 +388,51 @@ if __name__ == "__main__":
     #query = "List the injectors in decreasing order depending on their attributable oil produced. " \
     #"then estimate what fraction of the total water injected is due to the the top 2. Explain briefly what you did"
 
-    query="""First explain briefly what VRR is. Then plot the monthly aggregated VRR (aggregate well contributions),   
-    From the simulation results, also identify the top 2 producers 
-    by total allocation (best supported),
-    """ 
+    #query="""First explain briefly what VRR is. Then plot the monthly aggregated VRR (aggregate well contributions),   
+    #From the simulation results, also identify the top 2 producers 
+    #by total allocation (best supported),
+    #""" 
+
+    #query = "How many wells are there per type and subzone? I preffer results in charts"
+
     #and then plot a bar chart 
     #of their current liquid production due to injection, pressure, and depletion.
     #"""
-    #I also want to see a pie chart of the total volumes of oil and water produced among all the 
+    #query="""I want to see a pie chart of the total volumes of oil and water produced among all the 
     #producers in the model
     #"""
 
+    #query  ="""
+    #plot in a pie chart the fraction of produced volumes at present (oil gas and water)
+    #"""
     #query="Explain what VRR is and then checkl if we used a balanced model or an unbalanced?"
 
+    #query = "Give me a summary of the simulation results. Focus on weird values and channeling potential"
         
     #response =  agent.run( query )
-    response =  agent.run_with_deterministic_executor( query )#,run_presenter=False )
+    import pickle
+    from pathlib import Path
+
+    # 1) Run deterministic executor without presenter
+    response = agent.run_with_deterministic_executor(query, run_presenter=False)
+    execution_state = agent.execution_state
+
+    # 2) Save execution state
+    state_path = Path("execution_state.pkl")
+    with state_path.open("wb") as f:
+        pickle.dump(execution_state, f)
+    print(f"Saved execution state to: {state_path.resolve()}")
+
+  
+    # 3) Load execution state
+    with state_path.open("rb") as f:
+        loaded_execution_state = pickle.load(f)
+    presenter_only_response = PresenterComponent4(llm=llm).run(loaded_execution_state)
+    print(presenter_only_response)
+
+
         
-    print( response )
-    print()
-    export_presenter_response_html(response, "presenter_output.html")
+    export_presenter_response_html(presenter_only_response, "presenter_output.html")
     #import time
     #print("Starting pause...")
     #time.sleep(2) 

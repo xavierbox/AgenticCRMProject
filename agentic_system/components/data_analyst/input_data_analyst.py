@@ -423,7 +423,6 @@ class InputDataAnalyst:
                 "=======================",
                 flush=True,
             )
-            print(result, flush=True)
             return result
     
         raw_result = response.get("structured_response")
@@ -505,7 +504,6 @@ class InputDataAnalyst:
             "=======================",
             flush=True,
         )
-        print(result, flush=True)
         return result
 
         
@@ -516,10 +514,6 @@ def get_default_analyst( llm ):
 
 def get_default_analyst1():
     inj, prod,locs =get_default_data()
-    print( inj.head(4))
-    print( prod.head(4))
-    print( locs.head(4))
-    print( )
 
     analyst = InputDataAnalyst( llm = get_llm(), config = InputDataAnalystConfig() )
     analyst.update_data( {'injectors':inj,'producers':prod, 'locations':locs } )
@@ -531,10 +525,6 @@ if __name__ == "__main__":
 
 
     inj, prod,locs =get_default_data()
-    print( inj.head(4))
-    print( prod.head(4))
-    print( locs.head(4))
-    print( )
 
     analyst = InputDataAnalyst( llm = get_llm(), config = InputDataAnalystConfig() )
     analyst.update_data( {'injectors':inj,'producers':prod, 'locations':locs } )
@@ -545,9 +535,6 @@ if __name__ == "__main__":
     query  = "List wells with high watercut ( above 0.01 )"
     
     response = analyst.run(query)
-  
-    print( response.model_dump() )
-    print() 
 
  
 

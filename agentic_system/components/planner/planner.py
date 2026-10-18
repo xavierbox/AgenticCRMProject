@@ -100,7 +100,6 @@ class PlannerComponent(Generic[TPlan]):
             "=======================",
             flush=True,
         )
-        print(plan, flush=True)
         return plan 
 
     def plan(self, user_query: str, previous_state = None) -> TPlan:
@@ -396,13 +395,7 @@ def test_planner():
 
     try:
         response = planner.run(user_query=user_query, previous_state=None)
-        for task in response.tasks:
-            print(f"Task ID: {task.task_id}, Depends on: {task.depends_on}, Agent: {task.agent}, Instruction: {task.instruction}", end="\n\n")
-        
-        for task in response.tasks:
-            pprint.pprint( task.model_dump())
-            print()
-            
+
     except Exception as e:
         print(f"Error during planning: {e}")
 
@@ -427,8 +420,7 @@ def test_planner_tool():
 
     try:
         response = planner_tool.invoke({"query": user_query})
-        print(response)
-        
+
     except Exception as e:
         print(f"Error during planning: {e}")
 
@@ -439,6 +431,4 @@ if __name__ == "__main__":
     #test_planner()
     response  = test_planner_tool()
     print()
-    pprint.pprint( response.model_dump())
-    print() 
     

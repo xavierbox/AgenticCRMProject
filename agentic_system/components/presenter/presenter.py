@@ -44,6 +44,132 @@ from pydantic import BaseModel, Field, TypeAdapter
 
 adapter = TypeAdapter(list[TaskResult])
 
+
+#########################################################
+##########  test models for charts strict ###############
+#########################################################
+from typing import Annotated, Any, Literal
+
+from pydantic import BaseModel, ConfigDict, Field, StrictStr
+
+
+class StrictModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+# ---------- Plot arguments ----------
+
+class BarArgs(StrictModel):
+    x: StrictStr
+    y: StrictStr | list[StrictStr]
+    series_by: StrictStr | None = None
+    orientation: Literal["v", "h"] = "v"
+    barmode: Literal["group", "stack", "relative"] = "group"
+    title: StrictStr | None = None
+
+
+class LineArgs(StrictModel):
+    x: StrictStr
+    y: StrictStr | list[StrictStr]
+    series_by: StrictStr | None = None
+    title: StrictStr | None = None
+
+
+class PieArgs(StrictModel):
+    labels: StrictStr = Field(
+        description="Exact column name containing labels, never cell values."
+    )
+    values: StrictStr = Field(
+        description="Exact column name containing numeric values, never cell values."
+    )
+    title: StrictStr | None = None
+    hole: float = Field(default=0.0, ge=0.0, le=1.0)
+
+
+class ScatterArgs(StrictModel):
+    x: StrictStr
+    y: StrictStr | list[StrictStr]
+    series_by: StrictStr | None = None
+    size_by: StrictStr | None = None
+    text_by: StrictStr | None = None
+    title: StrictStr | None = None
+
+
+class TableArgs(StrictModel):
+    title: StrictStr | None = None
+
+
+class ListArgs(StrictModel):
+    columns: list[StrictStr] | StrictStr | None = None
+    sort_by: StrictStr | None = None
+    sort_order: Literal["asc", "desc"] = "desc"
+    limit: int | None = Field(default=None, gt=0)
+    title: StrictStr | None = None
+
+
+# ---------- Plot tool contracts ----------
+
+class BarPlot(StrictModel):
+    tool: Literal["plot_bar_chart"]
+    args: BarArgs
+
+
+class LinePlot(StrictModel):
+    tool: Literal["plot_line_chart"]
+    args: LineArgs
+
+
+class PiePlot(StrictModel):
+    tool: Literal["plot_pie_chart"]
+    args: PieArgs
+
+
+class ScatterPlot(StrictModel):
+    tool: Literal["plot_scatter_chart"]
+    args: ScatterArgs
+
+
+class TablePlot(StrictModel):
+    tool: Literal["plot_table"]
+    args: TableArgs
+
+
+class ListPlot(StrictModel):
+    tool: Literal["plot_list"]
+    args: ListArgs
+
+
+PlotSpec = Annotated[
+    BarPlot | LinePlot | PiePlot | ScatterPlot | TablePlot | ListPlot,
+    Field(discriminator="tool"),
+]
+
+
+# ---------- Preprocessing and complete plan ----------
+
+class PreprocessStep(StrictModel):
+    operation: Literal[
+        "filter_rows",
+        "aggregate",
+        "sort_rows",
+        "limit_rows",
+        "select_columns",
+        "select_top_entities",
+        "create_combined_category",
+        "create_date_bucket",
+        "melt",
+    ]
+    args: dict[str, Any] = Field(default_factory=dict)
+
+
+class ChartPlan(StrictModel):
+    preprocess: list[PreprocessStep] = Field(default_factory=list)
+    plot: PlotSpec
+
+####################################################################
+
+
+
  
 class UIItem(BaseModel):
     id: str
@@ -111,6 +237,7 @@ class PresenterChartingTools:
             "select_top_entities": self.select_top_entities,
             "create_combined_category": self.create_combined_category,
             "create_date_bucket": self.create_date_bucket,
+            "melt": self.melt
         }
 
         if operation not in preprocess_tools:
@@ -294,6 +421,27 @@ class PresenterChartingTools:
             return df[df[entity_col].isin(selected_entities)].copy()
 
         return ranking
+
+
+
+    def melt(
+        self,
+        df: pd.DataFrame,
+        value_vars: list[str],
+        id_vars: list[str] | None = None,
+        var_name: str = "CATEGORY",
+        value_name: str = "VALUE",
+    ) -> pd.DataFrame:
+        id_vars = id_vars or []
+
+        self._validate_columns(df, [*id_vars, *value_vars])
+
+        return df.melt(
+            id_vars=id_vars,
+            value_vars=value_vars,
+            var_name=var_name,
+            value_name=value_name,
+        )
 
 
     ##########################
@@ -1274,7 +1422,6 @@ class PresenterComponent4:
             "=======================",
             flush=True,
         )
-        print(response, flush=True)
         return response
 
     def _make_clarification_item(
@@ -1485,7 +1632,6 @@ class PresenterComponent4:
             task_result=task_result,
             context_text=context_text,
         )
-        print(sub_instructions.model_dump(), flush=True)
 
         ui_items: list[UIItem] = []
 
@@ -1635,6 +1781,8 @@ class PresenterComponent4:
     ) -> dict | None:
         work = df.copy()
 
+        print(df)
+
         preprocess_steps = plan.get("preprocess") or []
         plot = plan.get("plot")
 
@@ -1677,8 +1825,9 @@ class PresenterComponent4:
 
         print("Processing dataframe result with shape:", df.shape)
         print( df )
+        
 
-        if nrows <= 2 and ncols <= 2:
+        if nrows <= -2 and ncols <= 2:
         #if nrows <= 5 and ncols <= 5:
             
             print("It is a very small table")
@@ -1699,8 +1848,6 @@ class PresenterComponent4:
             table_context,
         )
 
-        print('****chart plan****')
-        print(chart_plan)
 
 
         chart_output = self._run_chart_plan(
@@ -1752,7 +1899,7 @@ class PresenterComponent4:
 
         return text.strip()
 
-    def _select_chart_plan(
+    def old_non_strict__select_chart_plan(
         self,
         user_query: str,
         table_context: str,
@@ -1769,9 +1916,6 @@ class PresenterComponent4:
             ),
         ]
 
-        print( table_context )
-        print( user_query )
-
         response = self.llm.invoke(messages)
 
         text = self._strip_markdown_json(
@@ -1781,7 +1925,28 @@ class PresenterComponent4:
         return json.loads(text)
     
 
+    def _select_chart_plan(
+        self,
+        user_query: str,
+        table_context: str,
+    ) -> dict:
+        messages = [
+            SystemMessage(content=self.config.prompt),
+            HumanMessage(
+                content=(
+                    f"USER QUERY\n{user_query}\n\n"
+                    f"TABLE\n{table_context}"
+                )
+            ),
+        ]
 
+        structured_llm = self.llm.with_structured_output(ChartPlan,
+            method="function_calling")
+        plan = structured_llm.invoke(messages)
+
+        return plan.model_dump()
+
+    
 
 def print_presenter_response(
     presenter_response,

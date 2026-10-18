@@ -129,13 +129,25 @@ Args:
 }
 }
 
-Rules:
+9. melt
+Description: Reshape metric columns into category/value rows. Useful when pie-chart categories are stored as separate columns, including single-row tables.
 
-* Use preprocess only when the input table is not already ready for plotting.
-* Operations are executed in the listed order.
-* Do not invent columns.
-* Prefer the smallest number of operations needed.
-* Aggregation, filtering, ranking, date bucketing and limiting should be done in preprocess rather than in the plotting tool.
+Args:
+{
+    "value_vars": ["COLUMN_A", "COLUMN_B",...],
+    "id_vars": [],
+    "var_name": "CATEGORY",
+    "value_name": "VALUE"
+}
+
+- value_vars: Required. Existing columns to unpivot.
+- id_vars: Optional. Existing identifier columns to preserve. Default: [].
+- var_name: Optional. Name of the generated category column. Default: "CATEGORY".
+- value_name: Optional. Name of the generated value column. Default: "VALUE".
+
+After this step, plot arguments must reference the generated column names.
+For example, pie-chart args: {"labels": "CATEGORY", "values": "VALUE"}.
+
 
 
 

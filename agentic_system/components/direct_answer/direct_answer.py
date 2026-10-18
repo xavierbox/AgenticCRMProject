@@ -141,7 +141,6 @@ class DirectAnswerComponent:
         context_parts = []
         for item in dependencies:
 
-            print(f"Dependency item: {item}", type(item))  # Debugging line
             if isinstance(item, TaskResult):
 
                 cheap_output = item.cheap_output
@@ -381,7 +380,6 @@ class DirectAnswerComponent:
             "=======================",
             flush=True,
         )
-        print(result, flush=True)
         return result
 
         
