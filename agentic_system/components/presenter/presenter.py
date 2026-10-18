@@ -2,6 +2,7 @@ import sys
 from uuid import uuid4
 import json
 import textwrap
+from time import perf_counter
 #from yaml 
 import warnings as warnings_module
 import json
@@ -1255,7 +1256,26 @@ class PresenterComponent4:
 
 
     def run(self, result_state: ExecutorState) -> PresenterResponse:
-        return self.process_task_results(result_state)
+        instruction = result_state.get("user_query", "") if isinstance(result_state, dict) else ""
+        started = perf_counter()
+        print(
+            "\n====== [RUN START] ======\n"
+            f"agent: {self.agent_name}\n"
+            f"instruction: {instruction}\n"
+            "=========================",
+            flush=True,
+        )
+        response = self.process_task_results(result_state)
+        elapsed = perf_counter() - started
+        print(
+            "\n====== [RUN END] ======\n"
+            f"agent: {self.agent_name}\n"
+            f"elapsed: {elapsed:.2f}s\n"
+            "=======================",
+            flush=True,
+        )
+        print(response, flush=True)
+        return response
 
     def _make_clarification_item(
         self,
@@ -1656,11 +1676,12 @@ class PresenterComponent4:
         nrows, ncols = df.shape
 
         print("Processing dataframe result with shape:", df.shape)
-        #print( df )
+        print( df )
 
         if nrows <= 2 and ncols <= 2:
         #if nrows <= 5 and ncols <= 5:
             
+            print("It is a very small table")
             return self._present_very_small_table(
                 df,
                 data_result,
@@ -1747,6 +1768,9 @@ class PresenterComponent4:
                 )
             ),
         ]
+
+        print( table_context )
+        print( user_query )
 
         response = self.llm.invoke(messages)
 

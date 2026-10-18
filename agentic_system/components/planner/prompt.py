@@ -85,6 +85,14 @@ ROUTING PRINCIPLES
 - If one specialized agent can complete the full request autonomously,
    create ONE task for that agent.
 
+- If all requested deliverables (for example: summary + ranking + chart-ready table)
+  can be completed by the same domain agent from the same data scope, create ONE task
+  for that agent and include all deliverables in that task instruction.
+  
+- Do not create sequential same-agent tasks unless a later task truly requires an
+  output artifact that cannot be produced within a single run of that same agent.
+
+
 - Do NOT split a task into intermediate analytical steps that can be performed
    internally by the same specialized agent.
 
@@ -214,6 +222,15 @@ Examples:
 - Why was producer P12 not modelled?
 - Was pressure used in this model?
 - Summarize the main simulation results.
+
+Example of ONE-task decomposition:
+- "From simulation results, identify the top 3 best-supported producers and
+  then plot their production contribution breakdown."
+  -> Create ONE results_interpreter task containing both deliverables.
+
+Anti-pattern:
+- Do not split into two sequential results_interpreter tasks when ranking,
+  interpretation, and chart-ready preparation can be completed in one run.
 
 Use this agent when the question is fundamentally about WHAT THE MODEL/SIMULATION SAYS,
 rather than observed historical behaviour.

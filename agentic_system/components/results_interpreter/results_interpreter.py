@@ -196,9 +196,9 @@ class ResultsInterpreterTools(BaseDomainTools[ResultsInterpreterData]):
         - GAIN:
         Fraction of water injected in an injector that is recovered as
         liquid production in the producer. GAIN is injector-centric.
-        - PALLOCATION:
+        - PRODUCER_ALLOCATION:
         Fraction of the producer's total liquid production attributed to
-        injection from that specific injector. PALLOCATION is producer-centric.
+        injection from that specific injector. PRODUCER_ALLOCATION is producer-centric.
         - GAIN_CLASS:
         Classification of GAIN. Gains below 0.05 are negligible.
 
@@ -520,7 +520,7 @@ class ResultsInterpreterComponent:
     Typical responsibilities include:
     - comparing injectors, producers, and injector-producer relationships;
     - assessing injector utility and producer support;
-    - interpreting GAIN, PALLOCATION, TAU, TAUP, LO, and pressure effects;
+    - interpreting GAIN, PRODUCER_ALLOCATION, TAU, TAUP, LO, and pressure effects;
     - identifying important rankings, anomalies, and patterns;
     - interpreting production contributions from injection, depletion, and pressure;
     - qualifying conclusions using simulation-quality information;
@@ -1082,7 +1082,7 @@ def prepare_test_data( ) :
     import pandas as pd
 
     c = """
-    INJECTOR	PRODUCER PALLOCATION	GAIN	GAIN_CLASS  
+    INJECTOR	PRODUCER PRODUCER_ALLOCATION	GAIN	GAIN_CLASS  
     0	I1	P1	0.508456	0.38   meaningful
     1	I2	P1	0.432001	0.30   meaningful
     2	I3	P1	0.007279	0.001  negligible
@@ -1152,7 +1152,7 @@ def prepare_test_data( ) :
                         description="Fraction of water injected in the injector that is recovered as liquid production in the producer. GAIN is denoted as G_{ij}. This is the -gain- of production due to injection. This controls the strength of support from injector (i) to producer (p)"
                     ),
                     ColumnCard(
-                        name="PALLOCATION",
+                        name="PRODUCER_ALLOCATION",
                         data_type="float",
                         description=(
                             "This is the -Producer allocation-. It is the fraction of the producer's total liquid production "
@@ -1272,7 +1272,7 @@ def prepare_test_data( ) :
                         name="total_allocation",
                         data_type="float",
                         description=(
-                            "Sum of PALLOCATION over all injectors connected "
+                            "Sum of PRODUCER_ALLOCATION over all injectors connected "
                             "to this producer."
                         )
                     ),
@@ -1289,12 +1289,12 @@ def prepare_test_data( ) :
         ],
 
         semantic_constraints=[
-            "GAIN and PALLOCATION have different physical meanings and must not be used interchangeably.",
+            "GAIN and PRODUCER_ALLOCATION have different physical meanings and must not be used interchangeably.",
             "GAIN is injector-centric.",
-            "PALLOCATION is producer-centric.",
+            "PRODUCER_ALLOCATION is producer-centric.",
             "GAIN below 0.05 is considered negligible.",
             "For a balanced simulation, the sum of GAIN across producers for an injector must be <= 1.",
-            "The sum of PALLOCATION across injectors for a producer must be <= 1.",
+            "The sum of PRODUCER_ALLOCATION across injectors for a producer must be <= 1.",
             "Produced water fraction and produced oil fraction must sum to 1.",
         ],
     )
@@ -1350,7 +1350,7 @@ def prepare_test_data( ) :
             "Distinguish between direct observations, model interpretations and diagnostic hypotheses. Do not present a hypothesis as a confirmed physical mechanism.",
             
             "For injector-focused questions, examine GAIN, injector utility, number of supported producers and the distribution of connectivity across producers.",
-            "For producer-support questions, examine number_supporting_injectors, total_allocation, PALLOCATION and the modeled injection-production contribution.",
+            "For producer-support questions, examine number_supporting_injectors, total_allocation, PRODUCER_ALLOCATION and the modeled injection-production contribution.",
             
             "A highly connected injector-producer relationship is characterized primarily by high GAIN.",
             
@@ -1461,7 +1461,7 @@ def prepare_test_data2( ) :
     import pandas as pd
 
     c = """
-    INJECTOR	PRODUCER PALLOCATION	GAIN	GAIN_CLASS  DISTANCE 
+    INJECTOR	PRODUCER PRODUCER_ALLOCATION	GAIN	GAIN_CLASS  DISTANCE 
     0	I1	P1	0.508456	0.38   meaningful   612 
     1	I2	P1	0.432001	0.30   meaningful   700 
     2	I3	P1	0.007279	0.001  negligible   875            
@@ -1531,7 +1531,7 @@ def prepare_test_data2( ) :
                         description="Fraction of water injected in the injector that is recovered as liquid production in the producer. GAIN is denoted as G_{ij}. This is the -gain- of production due to injection. This controls the strength of support from injector (i) to producer (p)"
                     ),
                     ColumnCard(
-                        name="PALLOCATION",
+                        name="PRODUCER_ALLOCATION",
                         data_type="float",
                         description=(
                             "This is the -Producer allocation-. It is the fraction of the producer's total liquid production "
@@ -1651,7 +1651,7 @@ def prepare_test_data2( ) :
                         name="total_allocation",
                         data_type="float",
                         description=(
-                            "Sum of PALLOCATION over all injectors connected "
+                            "Sum of PRODUCER_ALLOCATION over all injectors connected "
                             "to this producer."
                         )
                     ),
@@ -1668,12 +1668,12 @@ def prepare_test_data2( ) :
         ],
 
         semantic_constraints=[
-            "GAIN and PALLOCATION have different physical meanings and must not be used interchangeably.",
+            "GAIN and PRODUCER_ALLOCATION have different physical meanings and must not be used interchangeably.",
             "GAIN is injector-centric.",
-            "PALLOCATION is producer-centric.",
+            "PRODUCER_ALLOCATION is producer-centric.",
             "GAIN below 0.05 is considered negligible.",
             "For a balanced simulation, the sum of GAIN across producers for an injector must be <= 1.",
-            "The sum of PALLOCATION across injectors for a producer must be <= 1.",
+            "The sum of PRODUCER_ALLOCATION across injectors for a producer must be <= 1.",
             "Produced water fraction and produced oil fraction must sum to 1.",
         ],
     )
@@ -1729,7 +1729,7 @@ def prepare_test_data2( ) :
             "Distinguish between direct observations, model interpretations and diagnostic hypotheses. Do not present a hypothesis as a confirmed physical mechanism.",
             
             "For injector-focused questions, examine GAIN, injector utility, number of supported producers and the distribution of connectivity across producers.",
-            "For producer-support questions, examine number_supporting_injectors, total_allocation, PALLOCATION and the modeled injection-production contribution.",
+            "For producer-support questions, examine number_supporting_injectors, total_allocation, PRODUCER_ALLOCATION and the modeled injection-production contribution.",
             
             "A highly connected injector-producer relationship is characterized primarily by high GAIN.",
             
@@ -1812,7 +1812,7 @@ def hard_coded_semantics( self ):
                         description="Fraction of water injected in the injector that is recovered as liquid production in the producer. GAIN is denoted as G_{ij}. This is the -gain- of production due to injection. This controls the strength of support from injector (i) to producer (p)"
                     ),
                     ColumnCard(
-                        name="PALLOCATION",
+                        name="PRODUCER_ALLOCATION",
                         data_type="float",
                         description=(
                             "This is the -Producer allocation-. It is the fraction of the producer's total liquid production "
@@ -1932,7 +1932,7 @@ def hard_coded_semantics( self ):
                         name="total_allocation",
                         data_type="float",
                         description=(
-                            "Sum of PALLOCATION over all injectors connected "
+                            "Sum of PRODUCER_ALLOCATION over all injectors connected "
                             "to this producer."
                         )
                     ),
@@ -1949,12 +1949,12 @@ def hard_coded_semantics( self ):
         ],
 
         semantic_constraints=[
-            "GAIN and PALLOCATION have different physical meanings and must not be used interchangeably.",
+            "GAIN and PRODUCER_ALLOCATION have different physical meanings and must not be used interchangeably.",
             "GAIN is injector-centric.",
-            "PALLOCATION is producer-centric.",
+            "PRODUCER_ALLOCATION is producer-centric.",
             "GAIN below 0.05 is considered negligible.",
             "For a balanced simulation, the sum of GAIN across producers for an injector must be <= 1.",
-            "The sum of PALLOCATION across injectors for a producer must be <= 1.",
+            "The sum of PRODUCER_ALLOCATION across injectors for a producer must be <= 1.",
             "Produced water fraction and produced oil fraction must sum to 1.",
         ],
     )
@@ -2009,7 +2009,7 @@ def hard_coded_semantics( self ):
             "Distinguish between direct observations, model interpretations and diagnostic hypotheses. Do not present a hypothesis as a confirmed physical mechanism.",
             
             "For injector-focused questions, examine GAIN, injector utility, number of supported producers and the distribution of connectivity across producers.",
-            "For producer-support questions, examine number_supporting_injectors, total_allocation, PALLOCATION and the modeled injection-production contribution.",
+            "For producer-support questions, examine number_supporting_injectors, total_allocation, PRODUCER_ALLOCATION and the modeled injection-production contribution.",
             
             "A highly connected injector-producer relationship is characterized primarily by high GAIN.",
             

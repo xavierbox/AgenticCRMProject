@@ -2,6 +2,7 @@ import inspect as inspect_module
 import json
 import sys
 from dataclasses import dataclass
+from time import perf_counter
 from threading import Lock
 from typing import Any, Iterable
 
@@ -62,12 +63,12 @@ def prepare_test_data( ) :
     import pandas as pd
 
     c = """
-    INJECTOR	PRODUCER PRODUCER_ALLOCATION	GAIN	GAIN_CLASS  
-    0	I1	P1	0.508456	0.38   meaningful
-    1	I2	P1	0.432001	0.30   meaningful
-    2	I3	P1	0.007279	0.001  negligible
-    3	I1	P2	0.463442	0.4    meaningful
-    4	I3	P2	0.226982	0.15   meaningful
+    INJECTOR	PRODUCER PRODUCER_ALLOCATION	GAIN	GAIN_CLASS DISTANCE
+    0	I1	P1	0.508456	0.38   meaningful 450.0
+    1	I2	P1	0.432001	0.30   meaningful 780.0
+    2	I3	P1	0.007279	0.001  negligible 1200.0
+    3	I1	P2	0.463442	0.4    meaningful 620.0
+    4	I3	P2	0.226982	0.15   meaningful 950.0
     """
     q = """	PRODUCER	CORRELATION	VARIANCE_RATIO	QUALITY_SCORE	QUALITY_CLASS
     0	P1	0.802377	0.929430	0.864767	good
@@ -90,12 +91,6 @@ def prepare_test_data( ) :
     connectivity_table  = pd.read_csv(io.StringIO(c), sep=r"\s+", index_col=0)
     simulation_quality_table = pd.read_csv(io.StringIO(q), sep=r"\s+", index_col=0)
     producer_model_table = pd.read_csv(io.StringIO(p), sep=r"\s+", index_col=0)
-
-
-    print(connectivity_table)
-    print(simulation_quality_table)
-    print(producer_model_table.T)
-
 
     raw_data = {
         "connectivity_table": connectivity_table,
@@ -132,7 +127,7 @@ def prepare_test_data( ) :
                         description="Fraction of water injected in the injector that is recovered as liquid production in the producer. GAIN is denoted as G_{ij}. This is the -gain- of production due to injection. This controls the strength of support from injector (i) to producer (p)"
                     ),
                     ColumnCard(
-                        name="PALLOCATION",
+                        name="PRODUCER_ALLOCATION",
                         data_type="float",
                         description=(
                             "This is the -Producer allocation-. It is the fraction of the producer's total liquid production "
@@ -140,6 +135,11 @@ def prepare_test_data( ) :
                             "total liquid production of a producer includes contributions from all injectors connected to the producer, the producer "
                             "production due to pressure changes and the liquid production due to primary depletion "
                         )
+                    ),
+                    ColumnCard(
+                        name="DISTANCE",
+                        data_type="float",
+                        description="Distance between injector and producer, in meters."
                     ),
                     ColumnCard(
                         name="GAIN_CLASS",
@@ -252,7 +252,7 @@ def prepare_test_data( ) :
                         name="total_allocation",
                         data_type="float",
                         description=(
-                            "Sum of PALLOCATION over all injectors connected "
+                            "Sum of PRODUCER_ALLOCATION over all injectors connected "
                             "to this producer."
                         )
                     ),
@@ -269,12 +269,12 @@ def prepare_test_data( ) :
         ],
 
         semantic_constraints=[
-            "GAIN and PALLOCATION have different physical meanings and must not be used interchangeably.",
+            "GAIN and PRODUCER_ALLOCATION have different physical meanings and must not be used interchangeably.",
             "GAIN is injector-centric.",
-            "PALLOCATION is producer-centric.",
+            "PRODUCER_ALLOCATION is producer-centric.",
             "GAIN below 0.05 is considered negligible.",
             "For a balanced simulation, the sum of GAIN across producers for an injector must be <= 1.",
-            "The sum of PALLOCATION across injectors for a producer must be <= 1.",
+            "The sum of PRODUCER_ALLOCATION across injectors for a producer must be <= 1.",
             "Produced water fraction and produced oil fraction must sum to 1.",
         ],
     )
@@ -330,7 +330,7 @@ def prepare_test_data( ) :
             "Distinguish between direct observations, model interpretations and diagnostic hypotheses. Do not present a hypothesis as a confirmed physical mechanism.",
 
             "For injector-focused questions, examine GAIN, injector utility, number of supported producers and the distribution of connectivity across producers.",
-            "For producer-support questions, examine number_supporting_injectors, total_allocation, PALLOCATION and the modeled injection-production contribution.",
+            "For producer-support questions, examine number_supporting_injectors, total_allocation, PRODUCER_ALLOCATION and the modeled injection-production contribution.",
 
             "A highly connected injector-producer relationship is characterized primarily by high GAIN.",
 
@@ -385,8 +385,9 @@ class ResultsAnalystFinalResponse(BaseModel):
         description=(
             "A substantive answer or engineering interpretation. "
             "Never an execution-status summary. "
-            "Use None when selected tables or plots fully satisfy "
-            "the request and no textual explanation is needed."
+            "Provide text when the user asks for interpretation, explanation, "
+            "conclusions, or a direct answer. "
+            "Use None for pure artifact-only requests (for example: only plot or only publish table)."
         ),
     )
 
@@ -404,15 +405,48 @@ class ResultsAnalystTools:
             StructuredTool.from_function(self.catalog_snapshot),
             StructuredTool.from_function(self.sql_materialize),
             StructuredTool.from_function(self.retrieve_table),
+            StructuredTool.from_function(self.retrieve_tables),
             StructuredTool.from_function(self.get_simulation_metadata),
         ]
 
+    def _get_simulation_well_names(self) -> tuple[list[str], list[str]]:
+        df = self._smart_data.get_df("connectivity_table")
+
+        if "INJECTOR" not in df.columns or "PRODUCER" not in df.columns:
+            raise ValueError(
+                "connectivity_table must contain INJECTOR and PRODUCER columns."
+            )
+
+        injectors = sorted(df["INJECTOR"].dropna().astype(str).unique().tolist())
+        producers = sorted(df["PRODUCER"].dropna().astype(str).unique().tolist())
+        return injectors, producers
+
     def get_simulation_metadata(self) -> str:
         """
-        Returns metadata information about the simulation such as the training dates, the 
-        model type, whether it was a balanced or unbalanced simulation and info on discarded 
-        producers and injectors. 
+        Returns metadata information about:
+         - the simulation such as the training dates, 
+         - the simulation model type, 
+         - whether it was a balanced or unbalanced simulation 
+         - info on discarded producers and injectors. 
+         - list of well names and type of well (injector or producer) in the simulation.  
         """
+        print(
+            "\n\t[TOOL]\n"
+            "\tcaller=results_interpreter\n"
+            "\ttool=get_simulation_metadata\n"
+            "\targs={}",
+            flush=True,
+        )
+
+        try:
+            injector_names, producer_names = self._get_simulation_well_names()
+        except Exception:
+            injector_names = []
+            producer_names = []
+
+        injector_lines = "\n".join(f"- {name}" for name in injector_names) or "- None"
+        producer_lines = "\n".join(f"- {name}" for name in producer_names) or "- None"
+
         return (
             "Dummy simulation metadata:\n"
             "Model: CRMP.\n"
@@ -421,7 +455,12 @@ class ResultsAnalystTools:
             "Input data date range: [2020-01-01, 2025-12-31] (inclusive).\n"
             "Injector-producer distance threshold: 1256 meters.\n"
             "Discarded injectors: 3 injectors were excluded because they were not "
-            "within the threshold distance of any producer."
+            "within the threshold distance of any producer.\n"
+            "Well count by type:\n"
+            f"- Injector count: {len(injector_names)}\n"
+            f"- Producer count: {len(producer_names)}\n"
+            f"Injectors in simulation:\n{injector_lines}\n"
+            f"Producers in simulation:\n{producer_lines}"
         )
 
     def _format_catalog_snapshot(self, snapshot: CatalogTablesSnapshot) -> str:
@@ -486,13 +525,8 @@ class ResultsAnalystTools:
             lines.append("")
 
 
-        print( "[format_catalog_snapshot]")
-
-
         format_tables(" ", snapshot.base_tables)
         format_tables(" ", snapshot.derived_tables)
-
-        print( '[*format_catalog_snapshot]')
         return "\n".join(lines).strip()
 
     def catalog_snapshot(
@@ -529,7 +563,13 @@ class ResultsAnalystTools:
         # GET STRUCTURED SNAPSHOT
 
 
-        print( ['catalog_snapshot'])
+        print(
+            "\n\t[TOOL]\n"
+            "\tcaller=results_interpreter\n"
+            "\ttool=catalog_snapshot\n"
+            f"\targs={{'input_tables': {input_tables!r}}}",
+            flush=True,
+        )
         snapshot = self._smart_data.catalog_snapshot(input_tables)
         formatted = self._format_catalog_snapshot( snapshot )
 
@@ -550,45 +590,50 @@ class ResultsAnalystTools:
             failure when an error occured
             If the resulting table is small, also returns a string preview of the table.
         """
-
-
-        print("[sql_materialize]",materialized_table_name, 'instruction', sql )
-        print('sql\n',sql,'\ndescription:\n',detailed_table_description)
-
-
         print(
-            f"[SQL waiting] {materialized_table_name}",
+            "\n\t[TOOL]\n"
+            "\tcaller=results_interpreter\n"
+            "\ttool=sql_materialize\n"
+            f"\targs={{'materialized_table_name': {materialized_table_name!r}, "
+            f"'detailed_table_description': {detailed_table_description!r}, 'sql': {sql!r}}}",
             flush=True,
         )
 
         with self._sql_lock:
-            print(
-                f"[SQL starting] {materialized_table_name}",
-                flush=True,
-            )
-
             result = self.smart_data_tools.sql_materialize(
                 sql,
                 materialized_table_name,
                 detailed_table_description,
             )
 
-            print(
-                f"[SQL finished] {materialized_table_name}",
-                flush=True,
-            )
-
         return result
 
-    def retrieve_table(self, table_name:str, max_number_of_rows:int | None = None )->str:
         """
-        Retrieve table rows as CSV with explicit completeness metadata.
+        
+        #Retrieve table data for LLM analysis with clear table-level metadata.
 
-        Omit max_number_of_rows or pass None to retrieve up to 1500 rows.
-        Pass a positive integer for a smaller preview. All requests are capped
-        at 1500 rows. A truncated result contains only the first rows, not a
-        representative sample.
+        Purpose:
+        - Provide the model with actual rows plus table description and row counts
+          so it can reason over data 
+
+        Usage:
+        - Omit max_number_of_rows (or pass None) to retrieve all rows.
+        - Pass a positive integer for a smaller preview.
+        - Returned rows are always the first rows and may be truncated.
         """
+
+    def retrieve_table(self, table_name:str, max_number_of_rows:int | None = None )->str:
+
+        """
+        Retrieves a table by name for further analysis
+        """
+        print(
+            "\n\t[TOOL]\n"
+            "\tcaller=results_interpreter\n"
+            "\ttool=retrieve_table\n"
+            f"\targs={{'table_name': {table_name!r}, 'max_number_of_rows': {max_number_of_rows!r}}}",
+            flush=True,
+        )
         if max_number_of_rows is not None:
             if isinstance(max_number_of_rows, bool) or not isinstance(max_number_of_rows, int):
                 raise TypeError("max_number_of_rows must be a positive integer or None.")
@@ -615,7 +660,55 @@ class ResultsAnalystTools:
                 "Do not infer whole-table statistics from this preview. "
                 "Use sql_materialize to aggregate or filter the full table.\n"
             )
+
         return metadata + "Records:\n" + df.head(returned_rows).to_csv(index=False)
+
+    def retrieve_tables(
+        self,
+        table_names: list[str],
+        max_number_of_rows: int | None = None,
+    ) -> str:
+        """
+        Retrieves multiple tables in one call for analysis.
+
+        Args:
+            table_names: list of table names to retrieve.
+            max_number_of_rows: optional per-table row limit.
+
+        Returns:
+            Concatenated table payloads, one section per requested table.
+        """
+
+        print(
+            "\n\t[TOOL]\n"
+            "\tcaller=results_interpreter\n"
+            "\ttool=retrieve_tables\n"
+            f"\targs={{'table_names': {table_names!r}, 'max_number_of_rows': {max_number_of_rows!r}}}",
+            flush=True,
+        )
+
+        if not isinstance(table_names, list) or not table_names:
+            raise ValueError("table_names must be a non-empty list of table names.")
+
+        sections = []
+        seen = set()
+
+        for table_name in table_names:
+            if not isinstance(table_name, str) or not table_name.strip():
+                raise ValueError("Each table name must be a non-empty string.")
+
+            if table_name in seen:
+                continue
+
+            seen.add(table_name)
+            sections.append(
+                self.retrieve_table(
+                    table_name=table_name,
+                    max_number_of_rows=max_number_of_rows,
+                )
+            )
+
+        return ("\n\n" + ("=" * 80) + "\n\n").join(sections)
 
 
 class ResultsAnalyst:
@@ -673,8 +766,8 @@ class ResultsAnalyst:
             simulation tables through update_data(tables). ResultsAnalystTools shares
             the component's SmartData catalog and delegates SQL materialization to
             SmartDataTools. Materialization prepares derived tables; retrieve_table
-            exposes values to the LLM, with a maximum of 1500 returned rows and explicit
-            truncation metadata. publish and plot collect table artifacts for the
+            exposes table data and metadata to the LLM for analysis, with a maximum
+            of 1500 returned rows and explicit truncation metadata. publish and plot collect table artifacts for the
             downstream presenter rather than rendering figures themselves.
 
             For ReAct integration, assign a shared dict[str, TaskResult] to
@@ -701,6 +794,13 @@ class ResultsAnalyst:
             task_id: str,
             depends_on: list[str] | None = None,
         ) -> str:
+            print(
+                "\n\t[TOOL]\n"
+                f"\tcaller={self.agent_name}\n"
+                f"\ttool={self.agent_name}\n"
+                f"\targs={{'query': {query!r}, 'task_id': {task_id!r}, 'depends_on': {depends_on!r}}}",
+                flush=True,
+            )
             storage = self.artifact_storage
             if storage is None:
                 raise RuntimeError("Artifact storage is not configured.")
@@ -870,9 +970,13 @@ class ResultsAnalyst:
         """
         Records the execution plan. 
         """
-
-
-        print(f"\n===== PLAN (TOOL) =====\n{plan}\n=======================\n")#, flush=True)
+        print(
+            "\n\t[TOOL]\n"
+            f"\tcaller={self.agent_name}\n"
+            "\ttool=record_plan\n"
+            f"\targs={{'plan': {plan!r}}}",
+            flush=True,
+        )
 
         return "OK"
 
@@ -895,13 +999,18 @@ class ResultsAnalyst:
         """
         publishes one or more tables to be presented to the user in tabular format 
         """
+        print(
+            "\n\t[TOOL]\n"
+            f"\tcaller={self.agent_name}\n"
+            "\ttool=publish\n"
+            f"\targs={{'table_names': {table_names!r}}}",
+            flush=True,
+        )
         error =  self._publish_table( table_names )
         if not error:
-            print(f"Published the tables  {','.join(table_names)} ")
             return f"Published the tables  {','.join(table_names)} "
 
         else:
-            print(f"Failed to produce the tables. The error was: {error}. Diagnose the problem and correct" )
             return f"Failed to produce the tables. The error was: {error}. Diagnose the problem and correct"
 
 
@@ -909,12 +1018,17 @@ class ResultsAnalyst:
         """
         Generates a representation of the tables listed that can be converted to charts by other agents
         """
+        print(
+            "\n\t[TOOL]\n"
+            f"\tcaller={self.agent_name}\n"
+            "\ttool=plot\n"
+            f"\targs={{'table_names': {table_names!r}}}",
+            flush=True,
+        )
         error =  self._publish_table( table_names )
         if not error:
-            print(f"Produced the plots for tables { ','.join(table_names)} ")
             return f"Produced the plots for tables { ','.join(table_names)} "
         else:
-            print(f"Failed to produce the plots. The error was: {error}. Diagnose the problem and correct")
             return f"Failed to produce the plots. The error was: {error}. Diagnose the problem and correct"
 
 
@@ -952,17 +1066,23 @@ class ResultsAnalyst:
 
 
             self.task_result.data_results.extend( data_results )
-            print("[_publish_table] completed", flush=True)
             return None
 
         except Exception as e:
-            print(e)
             return f" {str(e)} "
 
 
     def retrieve_table(self, table_name: str, max_number_of_rows: int | None = None) -> str:
-        """Retrieve CSV rows with completeness metadata, capped at 1500 rows."""
+        """Expose table rows and metadata to the LLM for analysis (cap: 1500 rows)."""
         return self.data_tools.retrieve_table(table_name, max_number_of_rows)
+
+    def retrieve_tables(
+        self,
+        table_names: list[str],
+        max_number_of_rows: int | None = None,
+    ) -> str:
+        """Expose multiple tables and metadata to the LLM for analysis."""
+        return self.data_tools.retrieve_tables(table_names, max_number_of_rows)
 
 
     def _build_system_prompt(self,
@@ -1002,6 +1122,9 @@ class ResultsAnalyst:
 
 
         return template.format( # type: ignore
+            semantic_constraints=format_list(
+                semantic_catalog.semantic_constraints
+            ),
             definitions=format_list(
                 semantic_context.definitions
             ),
@@ -1092,6 +1215,15 @@ class ResultsAnalyst:
             context: TaskExecutionContext | None = None
             )-> TaskResult  :
 
+        run_started = perf_counter()
+        print(
+            "\n====== [RUN START] ======\n"
+            f"agent: {self.agent_name}\n"
+            f"instruction: {query}\n"
+            "=========================",
+            flush=True,
+        )
+
         # Build a fresh prompt so dependency context cannot leak between runs.
         self._build_agent(context=context)
 
@@ -1100,17 +1232,15 @@ class ResultsAnalyst:
 
 
         agent = self.agent
+
         llm_messages = list(messages or [])
         llm_messages.append({'role': 'user', 'content': query})
 
-        print("[agent.invoke] starting", flush=True)
         response = agent.invoke(
             {
                 "messages": llm_messages
             } # type: ignore
         )
-
-        print('[agent.invoke] finished', flush = True )
 
         if self.config.structured_output:
 
@@ -1125,15 +1255,21 @@ class ResultsAnalyst:
                 self.task_result.data_results.append(text)
 
             self.task_result.cheap_output = self._build_cheap_output(self.task_result)
+            elapsed = perf_counter() - run_started
+            print(
+                "\n====== [RUN END] ======\n"
+                f"agent: {self.agent_name}\n"
+                f"elapsed: {elapsed:.2f}s\n"
+                "=======================",
+                flush=True,
+            )
+            print(self.task_result, flush=True)
             return self.task_result
 
 
         text = response["messages"][-1].content
         if not isinstance(text, str):
             raise TypeError("Expected the final agent response to be a string.")
-        print("[agent.invoke] completed", flush=True)
-
-
         self.task_result.data_results.append(
             TextResult(
                 role="answer",
@@ -1143,6 +1279,15 @@ class ResultsAnalyst:
         )
 
         self.task_result.cheap_output = self._build_cheap_output(self.task_result)
+        elapsed = perf_counter() - run_started
+        print(
+            "\n====== [RUN END] ======\n"
+            f"agent: {self.agent_name}\n"
+            f"elapsed: {elapsed:.2f}s\n"
+            "=======================",
+            flush=True,
+        )
+        print(self.task_result, flush=True)
         return self.task_result
 
 
@@ -1167,19 +1312,21 @@ if __name__ == "__main__":
             #the oil/liquid ratio at present in the producer. List the injectors. List the affected producers and their current 
             #oil and water production. Explain how you got the answer
             #"""
+
             #"Whats the average gain?"
             #"2 plots: 1: TAU vs TAUP and 2: TAU vs GAIN"
 
-            #"produce a brief summary of simulation results. Any strange observations for gains or qualitY?"
+            #"produce a brief summary of simulation results. Any strange observations?"
             #"was this model ran balanced or unbalanced?"
-
+            #"tell me about interpretation guidelines"
             #"whats injector utility?"
-            "Did we use BHP? and was this model balanced? How did you get those answers?"
+            #"Did we use BHP? and was this model balanced? How did you get those answers?"
             #"What injector has the highest attributable oil produced due to its injection. How did you get to that answer?"
             #"which are the top 5 best supported producers? and which are the 3 best injectors?"
             #"Is there any producer unsuported? "
             #"I want to know if the most performant producers are the ones best supported? performance is proportional to the oil to liquid ratio"
-            #"""interpert the connectivity but ignore from the data negligible gains. Then plot GAIN vs distance for non-negligible gains"""
+            #"""Interpret the connectivity but ignore from the data negligible gains
+            #Then also plot GAIN vs distance for non-negligible gains"""
             #"filter out negligible gains and interpret the connectivities observed. Plot GAIN vs Tau for those "
             #"Show GAIN versus TAU for non-negligible connections. "
             #"Is there any correlation between GAIN and Tau? Can you spot anomalous combinations. What further investigations could I do to rule out channneling?. Think hard in the last question and consider that i basically only have rates and well locations and maybe pressure at the producers"
@@ -1187,7 +1334,7 @@ if __name__ == "__main__":
             #"Summarize simulation results. Focus in anomalous values"
             #--no rates--"plot the liquid rate over time (monthly aggragated) of the 2 best performing producers and also the worst of all"    
             #"generate a TAU vs GAIN plot. Interpret it. "
-            #"Make a summary of the quality of the simulations and show the percent of the total production of all the wells combined that is due to injectionm, pressure and primary depletion"
+            "Make a summary of the quality of the simulations and show the percent of the total production of all the wells combined that is due to injectionm, pressure and primary depletion"
             #"Determine how many injectors -on average- support a producer with a non-negligible gain?. For the best supported producer show a pie chart of its produced volume fractions (oil, gas,water) and compare those volumes to those of the worst performing producer"
             #"Rank the injectors according to the attributable oil produced due to their injection. Plot in a bar chart the oil  produced currently by each producer"
             #"Is there any evidence of channelling?"

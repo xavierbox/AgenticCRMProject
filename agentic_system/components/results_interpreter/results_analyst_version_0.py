@@ -1,6 +1,9 @@
 import inspect as inspect_module
 import json
 import sys
+
+
+
 from dataclasses import dataclass
 from threading import Lock
 from typing import Any, Iterable
@@ -1118,13 +1121,13 @@ if __name__ == "__main__":
             #oil and water production. Explain how you got the answer
             #"""
             #"Whats the average gain?"
-            "2 plots: 1: TAU vs TAUP and 2: TAU vs GAIN"
+            #"2 plots: 1: TAU vs TAUP and 2: TAU vs GAIN"
 
 
             #"which are the top 5 best supported producers? and which are the 3 best injectors?"
             #"Is there any producer unsuported? "
             #"I want to know if the most performant producers are the ones best supported? performance is proportional to the oil to liquid ratio"
-            #"""interpert the connectivity but ignore from the data negligible gains. Then plot GAIN vs distance for non-negligible gains"""
+            """interpert the connectivity but ignore from the data negligible gains. Then plot GAIN vs distance for non-negligible gains"""
             #"filter out negligible gains and interpret the connectivities observed. Plot GAIN vs Tau for those "
             #"Show GAIN versus TAU for non-negligible connections. "
             #"Is there any correlation between GAIN and Tau? Can you spot anomalous combinations. What further investigations could I do to rule out channneling?. Think hard in the last question and consider that i basically only have rates and well locations and maybe pressure at the producers"

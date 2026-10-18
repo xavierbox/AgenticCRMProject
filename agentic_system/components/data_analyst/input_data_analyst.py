@@ -68,6 +68,13 @@ class InputDataAnalyst:
             task_id: str,
             depends_on: list[str] | None = None,
         ) -> str:
+            print(
+                "\n\t[TOOL]\n"
+                f"\tcaller={self.agent_name}\n"
+                f"\ttool={self.agent_name}\n"
+                f"\targs={{'query': {query!r}, 'task_id': {task_id!r}, 'depends_on': {depends_on!r}}}",
+                flush=True,
+            )
             if self.artifact_storage is None:
                 raise RuntimeError(
                     "Artifact storage is not configured."
@@ -334,7 +341,15 @@ class InputDataAnalyst:
         #    "The forecated amount of oil is 2231.22 with a VRRR of 1.2"
         #)
 
-        print("[InputDataAnalyst][run]", query)
+        run_started = perf_counter()
+        print(
+            "\n====== [RUN START] ======\n"
+            f"agent: {self.agent_name}\n"
+            f"instruction: {query}\n"
+            "=========================",
+            flush=True,
+        )
+
         started = perf_counter()
               
         prompt = self._build_prompt() 
@@ -374,7 +389,6 @@ class InputDataAnalyst:
                 "messages": llm_messages
             } # type: ignore
         )
-        print(f"after invoke in {perf_counter() - started:.2f}s",flush=True)
         
         #answer = response['messages'][-1].content
         #print( type(response), response )
@@ -389,7 +403,7 @@ class InputDataAnalyst:
                     "content to be a string."
                 )
 
-            return TaskResult(
+            result = TaskResult(
                 agent=self.agent_name,
                 instruction=query,
                 cheap_output=text,
@@ -401,8 +415,17 @@ class InputDataAnalyst:
                     )
                 ],
             )
+            elapsed = perf_counter() - run_started
+            print(
+                "\n====== [RUN END] ======\n"
+                f"agent: {self.agent_name}\n"
+                f"elapsed: {elapsed:.2f}s\n"
+                "=======================",
+                flush=True,
+            )
+            print(result, flush=True)
+            return result
     
-        print("We have structured response ")
         raw_result = response.get("structured_response")
       
         raw_results = []
@@ -431,8 +454,6 @@ class InputDataAnalyst:
 
             for n,table in enumerate(tables):
                 
-                print(f"Fetching table: {n}", flush=True)
-
                 table_name = getattr(table, "table_name", None)
                 
 
@@ -469,14 +490,23 @@ class InputDataAnalyst:
                     "Data analyst completed, but no textual summary or table metadata was returned."
         )
 
-        print(f"Returning the task result from [analyst] in {perf_counter() - started:.2f}s")
-        return TaskResult(
+        result = TaskResult(
                         agent=self.agent_name,
                         instruction=query,
                         cheap_output=cheap_output,
                         raw_results=raw_results,
                         data_results=data_results,
         )
+        elapsed = perf_counter() - run_started
+        print(
+            "\n====== [RUN END] ======\n"
+            f"agent: {self.agent_name}\n"
+            f"elapsed: {elapsed:.2f}s\n"
+            "=======================",
+            flush=True,
+        )
+        print(result, flush=True)
+        return result
 
         
 def get_default_analyst( llm ):
@@ -510,7 +540,10 @@ if __name__ == "__main__":
     analyst.update_data( {'injectors':inj,'producers':prod, 'locations':locs } )
 
     #response = analyst.run("how many wells are there per well type sector and subzone?")
+    
     query  = "show the well count per subzone and well type. Also, show the total liquid production per year in another table. Can you define VRR>?"
+    query  = "List wells with high watercut ( above 0.01 )"
+    
     response = analyst.run(query)
   
     print( response.model_dump() )

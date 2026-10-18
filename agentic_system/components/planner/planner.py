@@ -6,6 +6,7 @@ sys.path.append("../../")  # Add the parent directory to the Python path
 import pprint
 import inspect 
 from dataclasses import dataclass
+from time import perf_counter
 from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel, ValidationError
@@ -46,6 +47,13 @@ class PlannerComponent(Generic[TPlan]):
         """Expose the planner as a LangChain tool."""
 
         def generate_plan(query: str) -> str:
+            print(
+                "\n\t[TOOL]\n"
+                f"\tcaller={self.agent_name}\n"
+                f"\ttool={self.agent_name}\n"
+                f"\targs={{'query': {query!r}}}",
+                flush=True,
+            )
             plan = self.run(user_query=query)
             return plan.model_dump_json(indent=2)
 
@@ -74,8 +82,25 @@ class PlannerComponent(Generic[TPlan]):
 
         
     def run(self, user_query: str,previous_state = None ) -> TPlan:
+        started = perf_counter()
+        print(
+            "\n====== [RUN START] ======\n"
+            f"agent: {self.agent_name}\n"
+            f"instruction: {user_query}\n"
+            "=========================",
+            flush=True,
+        )
         plan = self.plan( user_query,previous_state  )
         self.last_plan = plan 
+        elapsed = perf_counter() - started
+        print(
+            "\n====== [RUN END] ======\n"
+            f"agent: {self.agent_name}\n"
+            f"elapsed: {elapsed:.2f}s\n"
+            "=======================",
+            flush=True,
+        )
+        print(plan, flush=True)
         return plan 
 
     def plan(self, user_query: str, previous_state = None) -> TPlan:
@@ -97,9 +122,10 @@ class PlannerComponent(Generic[TPlan]):
             try:
                 # 1. Try to invoke the LLM (Runs Pydantic validators automatically)
                 generated_plan = structured_llm.invoke(messages)                   
-                
+
                 # 2. SUCCESS: Reorder tasks chronologically using your property
                 generated_plan.tasks = generated_plan.execution_order
+                generated_plan = self._merge_adjacent_same_agent_tasks(generated_plan)
                 return generated_plan
 
             except (ValidationError, OutputParserException) as e:
@@ -142,6 +168,131 @@ class PlannerComponent(Generic[TPlan]):
             user_intent=f"FAILED_GENERATION: Retries configured to zero or negative. Could not plan: {user_query} ",
             tasks=[]
         )
+
+    def _merge_adjacent_same_agent_tasks(self, plan: TPlan) -> TPlan:
+        """
+        Collapse redundant same-agent tasks using two conservative passes:
+        1) direct chains (A -> B) where B only depends on A;
+        2) parallel siblings with identical dependencies.
+        """
+        tasks = list(plan.tasks)
+
+        if len(tasks) < 2:
+            return plan
+
+        task_by_id = {task.task_id: task for task in tasks}
+        downstream: dict[str, list[str]] = {task.task_id: [] for task in tasks}
+
+        for task in tasks:
+            for dependency in (task.depends_on or []):
+                if dependency in downstream:
+                    downstream[dependency].append(task.task_id)
+
+        removed_ids: set[str] = set()
+
+        for second in tasks:
+            if second.task_id in removed_ids:
+                continue
+
+            dependencies = second.depends_on or []
+            if len(dependencies) != 1:
+                continue
+
+            first_id = dependencies[0]
+            first = task_by_id.get(first_id)
+            if first is None or first.task_id in removed_ids:
+                continue
+
+            if first.agent != second.agent:
+                continue
+
+            direct_consumers = downstream.get(first.task_id, [])
+            if direct_consumers != [second.task_id]:
+                continue
+
+            first.instruction = (
+                first.instruction.rstrip()
+                + "\n\nAlso complete this deliverable in the same task:\n"
+                + second.instruction.strip()
+            )
+
+            removed_ids.add(second.task_id)
+
+            for task in tasks:
+                if not task.depends_on:
+                    continue
+
+                task.depends_on = [
+                    first.task_id if dep == second.task_id else dep
+                    for dep in task.depends_on
+                ]
+
+                seen: set[str] = set()
+                task.depends_on = [
+                    dep for dep in task.depends_on
+                    if not (dep in seen or seen.add(dep))
+                ]
+
+        if removed_ids:
+            tasks = [task for task in tasks if task.task_id not in removed_ids]
+
+        # Pass 2: merge parallel same-agent sibling tasks with identical deps.
+        removed_parallel_ids: set[str] = set()
+
+        for index, first in enumerate(tasks):
+            if first.task_id in removed_parallel_ids:
+                continue
+
+            first_deps = sorted((first.depends_on or []))
+
+            for second in tasks[index + 1 :]:
+                if second.task_id in removed_parallel_ids:
+                    continue
+
+                if first.agent != second.agent:
+                    continue
+
+                second_deps = sorted((second.depends_on or []))
+                if first_deps != second_deps:
+                    continue
+
+                # Avoid merging tasks that directly depend on each other.
+                if first.task_id in (second.depends_on or []):
+                    continue
+                if second.task_id in (first.depends_on or []):
+                    continue
+
+                first.instruction = (
+                    first.instruction.rstrip()
+                    + "\n\nAlso complete this deliverable in the same task:\n"
+                    + second.instruction.strip()
+                )
+
+                removed_parallel_ids.add(second.task_id)
+
+                for task in tasks:
+                    if not task.depends_on:
+                        continue
+
+                    task.depends_on = [
+                        first.task_id if dep == second.task_id else dep
+                        for dep in task.depends_on
+                    ]
+
+                    seen: set[str] = set()
+                    task.depends_on = [
+                        dep for dep in task.depends_on
+                        if not (dep in seen or seen.add(dep))
+                    ]
+
+        if removed_parallel_ids:
+            tasks = [task for task in tasks if task.task_id not in removed_parallel_ids]
+
+        if removed_ids or removed_parallel_ids:
+            plan.tasks = tasks
+            plan.tasks = plan.execution_order
+
+        return plan
 
     def _build_messages(
         self,

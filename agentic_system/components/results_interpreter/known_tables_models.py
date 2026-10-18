@@ -53,7 +53,7 @@ interpreter_semantic_catalog = {
                 {
                     "name": "DISTANCE",
                     "data_type": "float",
-                    "description": "Distance between injector and producer",
+                    "description": "Distance between injector and producer, in meters.",
                 },
                 
                 
@@ -249,7 +249,7 @@ interpreter_semantic_catalog = {
                     "name": "total_allocation",
                     "data_type": "float",
                     "description": (
-                        "Sum of PALLOCATION over all injectors connected "
+                        "Sum of PRODUCER_ALLOCATION over all injectors connected "
                         "to this producer."
                     ),
                 },
@@ -287,7 +287,7 @@ interpreter_semantic_catalog = {
             "must not be used interchangeably."
         ),
         "GAIN is injector-centric.",
-        "PALLOCATION is producer-centric.",
+        "PRODUCER_ALLOCATION is producer-centric.",
         "GAIN below 0.05 is considered negligible.",
         (
             "For a balanced simulation, the sum of GAIN across producers "
@@ -338,10 +338,6 @@ interpreter_semantic_context = {
             "A high-utility injector supports one or more producers and "
             "has total GAIN across producers approaching 1 in a balanced model."
         ),
-        (
-            "Model quality should be considered when assessing confidence "
-            "in producer-level interpretations."
-        ),
     ],
     "domain_knowledge": [
         (
@@ -357,10 +353,13 @@ interpreter_semantic_context = {
             "production attributable to all modeled injectors combined."
         ),
 
-        (  "simulations can be ran in 2 modes: balanced and unbalanced. In the former, "
-           "the gain is unconstrained and sum_p{GAIN_ip} can exceed the value of 1, which isnt physically possible. "
-           "This is done sometimes in diagnostic simulations. "
-           "balanced simulations guarantee that sum_p{GAIN_ip} < 1. In this case mass conservation is enforced"
+        (
+            "Simulations can run in balanced or unbalanced mode. "
+            "In unbalanced mode, the sum of GAIN across producers for an injector "
+            "is not constrained to be <= 1 and can exceed 1. Such results do not "
+            "enforce injector-level mass conservation and may be used diagnostically. "
+            "In balanced mode, the sum of GAIN across producers for each injector "
+            "is constrained to be <= 1, enforcing injector-level mass conservation."
         ),
         (
             "simulations can be ran with or without pressure information."
@@ -368,6 +367,24 @@ interpreter_semantic_context = {
 
     ],
     "interpretation_guidelines": [
+        (
+            "Scenario evaluation is outside this component's scope. Do not predict "
+            "the effects of shutting wells, changing injection rates, or other "
+            "hypothetical operational interventions."
+        ),
+        (
+            "For ambiguous rankings such as best, worst, strongest, or most effective, "
+            "determine the intended criterion from the question; do not assume these "
+            "terms always refer to the same metric. Request clarification when needed."
+        ),
+        (
+            "Select evidence across tables as needed: connectivity_table describes "
+            "injector-producer connections, producer_model_table describes production "
+            "drivers and response parameters, and simulation_quality_table describes "
+            "history-match quality. For current oil attribution to an injector, combine "
+            "PRODUCER_ALLOCATION with producer current liquid production and oil fraction. "
+            "For reliable strong connections, combine connectivity with producer quality."
+        ),
         (
             "Do not simply repeat table values. Identify patterns, extremes, "
             "rankings, anomalies and combinations of metrics that provide "
@@ -413,13 +430,6 @@ interpreter_semantic_context = {
             "producer observations."
         ),
 
-
-
-
-
-
-
-
         (
             "A poorly supported producer may be characterized by few or "
             "no meaningful injector connections together with low "
@@ -445,10 +455,7 @@ interpreter_semantic_context = {
         (
             "When identifying underutilized or potentially stranded "
             "injectors, look for low injector utility and few meaningful "
-            "producer connections. If actual injection rate information "
-            "is unavailable, describe the conclusion as low modeled "
-            "utilization rather than definitively calling the injector "
-            "operationally stranded."
+            "producer connections."
         ),
         (
             "For quantities without established absolute thresholds, such "

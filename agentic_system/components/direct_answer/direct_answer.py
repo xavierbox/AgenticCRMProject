@@ -68,6 +68,13 @@ class DirectAnswerComponent:
             task_id: str,
             depends_on: list[str] | None = None,
         ) -> str:
+            print(
+                "\n\t[TOOL]\n"
+                f"\tcaller={self.agent_name}\n"
+                f"\ttool={self.agent_name}\n"
+                f"\targs={{'query': {query!r}, 'task_id': {task_id!r}, 'depends_on': {depends_on!r}}}",
+                flush=True,
+            )
             if self.artifact_storage is None:
                 raise RuntimeError(
                     "Artifact storage is not configured."
@@ -287,7 +294,14 @@ class DirectAnswerComponent:
         context: TaskExecutionContext | None = None,
     ) -> TaskResult:
 
-        print("[direct_answer]", query )
+        run_started = perf_counter()
+        print(
+            "\n====== [RUN START] ======\n"
+            f"agent: {self.agent_name}\n"
+            f"instruction: {query}\n"
+            "=========================",
+            flush=True,
+        )
         started = perf_counter()
         history = list(messages or [])
 
@@ -352,13 +366,23 @@ class DirectAnswerComponent:
         structured_llm = self.llm.with_structured_output(TextResult)
         text_result = structured_llm.invoke(llm_messages)
 
-        return TaskResult(
+        result = TaskResult(
             agent=self.agent_name,
             instruction=query,
             cheap_output=text_result.text,
             raw_results=[text_result],
             data_results=[text_result],
         )
+        elapsed = perf_counter() - run_started
+        print(
+            "\n====== [RUN END] ======\n"
+            f"agent: {self.agent_name}\n"
+            f"elapsed: {elapsed:.2f}s\n"
+            "=======================",
+            flush=True,
+        )
+        print(result, flush=True)
+        return result
 
         
         #if not isinstance(answer, str):
