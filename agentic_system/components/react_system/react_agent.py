@@ -194,6 +194,93 @@ class ReactSystem:
         print(response, flush=True)
         return response 
 
+    def run_with_deterministic_executor(
+        self,
+        query: str,
+        previous_state: ExecutorState | None = None,
+        run_presenter=True,
+    ):
+        query = _xx_format_query_text(query)
+
+        started = perf_counter()
+
+        print(
+            "\n====== [DETERMINISTIC RUN START] ======\n"
+            "agent: react_system\n"
+            f"instruction: {query}\n"
+            "=======================================",
+            flush=True,
+        )
+
+        self.previous_query = copy.deepcopy(self.query)
+        self.query = query
+        self.turn_tasks_memory.clear()
+        self.response = None
+
+        plan = self.planner_component.run(query, previous_state)
+        self.plan = plan
+
+        print("\n====== [PLAN TASKS] ======", flush=True)
+        for index, task in enumerate(plan.tasks, start=1):
+            print(f"task_index: {index}", flush=True)
+            print(f"task_id: {task.task_id}", flush=True)
+            print(f"agent: {task.agent}", flush=True)
+            print(f"depends_on: {task.depends_on}", flush=True)
+            print(f"instruction: {task.instruction}", flush=True)
+            self._run_task_deterministic(task)
+            print("--------------------------", flush=True)
+
+        self._build_state()
+
+        if run_presenter:
+            response = self.get_presentation()
+            elapsed = perf_counter() - started
+            print(
+                "\n====== [DETERMINISTIC RUN END] ======\n"
+                "agent: react_system\n"
+                "elapsed: {:.2f}s\n"
+                "=====================================".format(elapsed),
+                flush=True,
+            )
+            print(response, flush=True)
+            return response
+
+        elapsed = perf_counter() - started
+        print(
+            "\n====== [DETERMINISTIC RUN END] ======\n"
+            "agent: react_system\n"
+            "elapsed: {:.2f}s\n"
+            "=====================================".format(elapsed),
+            flush=True,
+        )
+        print(plan, flush=True)
+        return plan
+
+    def _run_task_deterministic(self, task):
+        agent_name = task.agent
+        component_by_agent = {
+            "input_data_analysis": self.analyst,
+            "results_analyst": self.results_analyst,
+            self.analyst.agent_name: self.analyst,
+            self.results_analyst.agent_name: self.results_analyst,
+            self.direct_answer.agent_name: self.direct_answer,
+        }
+
+        component = component_by_agent.get(agent_name)
+        if component is None:
+            raise ValueError(f"No deterministic component found for agent '{agent_name}'.")
+
+        task_id = task.task_id
+        if task_id in self.turn_tasks_memory:
+            raise ValueError(f"Duplicate task_id '{task_id}' in deterministic execution.")
+
+        depends_on = task.depends_on or None
+        context = component.build_context_from_task_ids(depends_on)
+        task_result = component.run(query=task.instruction, context=context)
+        task_result.task_id = task_id
+        self.turn_tasks_memory[task_id] = task_result
+        return task_result
+
     def get_presentation( self ):
 
         started = perf_counter()
@@ -291,7 +378,7 @@ if __name__ == "__main__":
 
     #query = "Whats VRR? and which is the most supported producer and which one is producing the most due to primary depletion?"
     
-    query="Want to optimize injection to increase the most the oil produced volume while increasing the less water produced, which injectors should I boost. Explain how you came to that answer "
+    #query="Want to optimize injection to increase the most the oil produced volume while increasing the less water produced, which injectors should I boost. Explain how you came to that answer "
     #query = "Identify the most supported producer, then explain the engineering meaning of the support metrics reported for that producer."
     #query = "Compare the total liquid production per year"
     #query = """Identify the 2 producers with the highest historical cummulated liquid-production. Are those producers in the simulation?. If they are, show me the supporting injectors for each and the related  gains """ 
@@ -313,16 +400,23 @@ if __name__ == "__main__":
     #query = "List the injectors in decreasing order depending on their attributable oil produced. " \
     #"then estimate what fraction of the total water injected is due to the the top 2. Explain briefly what you did"
 
-    query="""First explain brieflt what VRR is. Then plot the monthly aggregated VRR (aggregate well contributions),   
+    query="""First explain briefly what VRR is. Then plot the monthly aggregated VRR (aggregate well contributions),   
     From the simulation results, also identify the top 2 producers 
-    by total allocation (best supported), and then plot a bar chart 
-    of their current liquid production due to injection, pressure, and depletion.
-    I also want to see a pie chart of the total volumes of oil and water produced among all the 
-    producers in the model
-    """
+    by total allocation (best supported),
+    """ 
+    #and then plot a bar chart 
+    #of their current liquid production due to injection, pressure, and depletion.
+    #"""
+    #I also want to see a pie chart of the total volumes of oil and water produced among all the 
+    #producers in the model
+    #"""
+
+    #query="Explain what VRR is and then checkl if we used a balanced model or an unbalanced?"
 
         
-    response =  agent.run( query )
+    #response =  agent.run( query )
+    response =  agent.run_with_deterministic_executor( query )#,run_presenter=False )
+        
     print( response )
     print()
     export_presenter_response_html(response, "presenter_output.html")

@@ -188,7 +188,7 @@ Create ONE input_data_analysis task containing the complete objective.
 
 
 -------------------------------------------------------------------------------
-"results_interpreter" — SIMULATION RESULTS INTERPRETATION
+"results_analyst" — SIMULATION RESULTS INTERPRETATION
 -------------------------------------------------------------------------------
 
 Use when the user wants to understand, inspect, compare, summarize, or interpret
@@ -226,10 +226,10 @@ Examples:
 Example of ONE-task decomposition:
 - "From simulation results, identify the top 3 best-supported producers and
   then plot their production contribution breakdown."
-  -> Create ONE results_interpreter task containing both deliverables.
+  -> Create ONE results_analyst task containing both deliverables.
 
 Anti-pattern:
-- Do not split into two sequential results_interpreter tasks when ranking,
+- Do not split into two sequential results_analyst tasks when ranking,
   interpretation, and chart-ready preparation can be completed in one run.
 
 Use this agent when the question is fundamentally about WHAT THE MODEL/SIMULATION SAYS,
@@ -319,7 +319,7 @@ logical dependency pipeline:
 
 1. General Knowledge (direct_answer)
 2. Historical Data Analysis (input_data_analysis)
-3. Simulation Results Interpretation (results_interpreter)
+3. Simulation Results Interpretation (results_analyst)
 4. Opportunity Discovery (opportunity_scanner)
 5. Specific Scenario Analysis (scenario_analyst)
 
@@ -332,12 +332,12 @@ Examples:
 - Input data selects or ranks wells, then simulation results provide modelled
   information for those wells:
 
-      input_data_analysis -> results_interpreter
+      input_data_analysis -> results_analyst
 
 - Simulation results are interpreted before optimization opportunities are
   identified:
 
-      results_interpreter -> opportunity_scanner
+      results_analyst -> opportunity_scanner
 
 - Candidate actions are identified before a specific selected intervention is
   evaluated:
@@ -369,7 +369,7 @@ Questions about observed historical behaviour:
 
 Questions about inferred/modelled CRM behaviour:
 
-    -> results_interpreter
+    -> results_analyst
 
 
 Example:
@@ -378,14 +378,14 @@ Example:
     -> input_data_analysis
 
 "Which injector provides the strongest modelled support?"
-    -> results_interpreter
+    -> results_analyst
 
 
 2. INTERPRETATION vs OPPORTUNITY DISCOVERY
 
 Questions asking what the simulation indicates:
 
-    -> results_interpreter
+    -> results_analyst
 
 Questions asking what operational improvements could potentially be made:
 
@@ -395,7 +395,7 @@ Questions asking what operational improvements could potentially be made:
 Example:
 
 "Which injectors are weakly connected?"
-    -> results_interpreter
+    -> results_analyst
 
 "Which injectors should we consider reducing?"
     -> opportunity_scanner

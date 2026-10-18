@@ -8,7 +8,7 @@ from typing import Any, Iterable
 
 import pandas as pd
 from langchain.agents import create_agent
-from langchain.agents.structured_output import ToolStrategy
+# from langchain.agents.structured_output import ToolStrategy
 from langchain_core.messages import AnyMessage
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
@@ -44,7 +44,7 @@ from agentic_system.components.results_interpreter.semantic_context import Resul
 class ResultsAnalystConfig( ):
     prompt_template: str | None = RESULTS_ANALYST_PROMPT_TEMPLATE
     use_memory : bool = False
-    structured_output : bool = True
+    structured_output : bool = False
     max_num_derived_tables: int = 10
 
     idiom_context:str   = '- date subtraction: Use column - INTERVAL \'X days/months\'. NEVER use DATE_SUB() or DATEADD().\n- date truncation: Use DATE_TRUNC(\'month\', column).\n- reserved keywords: Always wrap the column name "DATE" in double quotes to avoid Binder Errors.\n- string concatenation: Use the || operator or CONCAT().\n- boolean aggregation: Use FILTER clauses or BOOL_OR() / BOOL_AND() for cleaner logic.\n- nested aggregates: Avoid nested aggregates—never wrap MAX/MIN inside SUM/AVG/etc. Example: WITH current_year AS (SELECT EXTRACT(YEAR FROM MAX("DATE")) AS year FROM injectors), yearly_totals AS (...), yoy AS (...) SELECT ... FROM ... WHERE YEAR = (SELECT year FROM current_year)\n- cte helpers: Use CTEs to capture helper scalars (like current_year via MAX("DATE")) before performing group aggregations. For example:\n    WITH current_year AS (SELECT EXTRACT(YEAR FROM MAX("DATE")) AS year FROM injectors),\n         yearly_totals AS (...),\n         yoy AS (...)\n    SELECT ... FROM ... WHERE YEAR = (SELECT year FROM current_year)\n'
@@ -432,7 +432,7 @@ class ResultsAnalystTools:
         """
         print(
             "\n\t[TOOL]\n"
-            "\tcaller=results_interpreter\n"
+            "\tcaller=results_analyst\n"
             "\ttool=get_simulation_metadata\n"
             "\targs={}",
             flush=True,
@@ -565,7 +565,7 @@ class ResultsAnalystTools:
 
         print(
             "\n\t[TOOL]\n"
-            "\tcaller=results_interpreter\n"
+            "\tcaller=results_analyst\n"
             "\ttool=catalog_snapshot\n"
             f"\targs={{'input_tables': {input_tables!r}}}",
             flush=True,
@@ -592,7 +592,7 @@ class ResultsAnalystTools:
         """
         print(
             "\n\t[TOOL]\n"
-            "\tcaller=results_interpreter\n"
+            "\tcaller=results_analyst\n"
             "\ttool=sql_materialize\n"
             f"\targs={{'materialized_table_name': {materialized_table_name!r}, "
             f"'detailed_table_description': {detailed_table_description!r}, 'sql': {sql!r}}}",
@@ -629,7 +629,7 @@ class ResultsAnalystTools:
         """
         print(
             "\n\t[TOOL]\n"
-            "\tcaller=results_interpreter\n"
+            "\tcaller=results_analyst\n"
             "\ttool=retrieve_table\n"
             f"\targs={{'table_name': {table_name!r}, 'max_number_of_rows': {max_number_of_rows!r}}}",
             flush=True,
@@ -681,7 +681,7 @@ class ResultsAnalystTools:
 
         print(
             "\n\t[TOOL]\n"
-            "\tcaller=results_interpreter\n"
+            "\tcaller=results_analyst\n"
             "\ttool=retrieve_tables\n"
             f"\targs={{'table_names': {table_names!r}, 'max_number_of_rows': {max_number_of_rows!r}}}",
             flush=True,
@@ -727,7 +727,7 @@ class ResultsAnalyst:
     """
 
 
-    agent_name = "results_interpreter"
+    agent_name = "results_analyst"
 
     def __init__(self, llm ):
         self.llm =  llm; #get_llm()
@@ -1069,6 +1069,7 @@ class ResultsAnalyst:
             return None
 
         except Exception as e:
+            print("[_publish_table] results analyst. Error", str(e))
             return f" {str(e)} "
 
 
@@ -1175,7 +1176,8 @@ class ResultsAnalyst:
             model=self.llm,
             system_prompt = prompt,
             tools=self.tools,
-            response_format=ToolStrategy(ResultsAnalystFinalResponse) if self.config.structured_output else None
+            # response_format=ToolStrategy(ResultsAnalystFinalResponse) if self.config.structured_output else None
+            response_format=None,
         )
         if self.agent is None:
             raise ValueError("Agent was not initialized properly.")

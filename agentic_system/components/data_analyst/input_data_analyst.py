@@ -47,7 +47,7 @@ class InputDataAnalyst:
     """Specialized in quantitative analysis of the input data. 
     Use this tool to answer questions about the data, perform calculations, and provide insights based on the data.
     """
-    agent_name = "data_analyst"
+    agent_name = "input_data_analysis"
 
     _artifact_storage: dict[str, TaskResult]|None = None
 

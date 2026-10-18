@@ -1026,7 +1026,7 @@ class SmartDataTools(BaseDomainTools[SmartData]):
 
     def get_single_table_brief_description( self, table_name:str ):
         """Returns a brief textual description of a single table"""
-        print( ['get_single_table_brief_description'])
+        print(["get_single_table_brief_description", table_name])
         return self._data_component.get_single_table_brief_description( table_name )  
 
     def materialize_select( self, table_name, rows )->str:
