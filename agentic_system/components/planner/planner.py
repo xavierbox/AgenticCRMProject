@@ -16,7 +16,7 @@ from langchain_core.tools import StructuredTool
 TPlan = TypeVar("TPlan", bound=BaseModel)
 
 from agentic_system.common.base_plan import ExecutionPlanTemplate
-from agentic_system.common.get_llm import azure_llm_if
+from agentic_system.common.get_llm import azure_llm_if as get_llm 
 from agentic_system.components.planner.prompt import global_planner_prompt
 
 @dataclass 
@@ -352,9 +352,9 @@ class PlannerComponent(Generic[TPlan]):
         return messages
 
 
-def get_default_planner() -> PlannerComponent:
+def get_default_planner( llm ) -> PlannerComponent:
 
-    return PlannerComponent(llm=azure_llm_if(),
+    return PlannerComponent(llm = llm ,
                             config=PlannerConfig(prompt=global_planner_prompt), 
                             plan_model=ExecutionPlanTemplate)
 
@@ -379,13 +379,13 @@ def get_planner_as_structured_tool() -> StructuredTool:
     return tool 
 
 
-def test_planner():
+def test_planner( llm ):
     """
     Test the planner component.
     """
     print("Quick check ")
 
-    planner = get_default_planner()
+    planner = get_default_planner( llm )
 
     user_query="""What is VRR in waterflooding? plot the VRR for sectors 1,2 and 3.  
     Generate a summary report of the simulation results and identify the producers 
@@ -399,7 +399,9 @@ def test_planner():
     except Exception as e:
         print(f"Error during planning: {e}")
 
+
     print()
+    return response 
 
 
 def test_planner_tool():
@@ -428,7 +430,17 @@ def test_planner_tool():
     return response
 
 if __name__ == "__main__":
+
+    llm  = get_llm()
     #test_planner()
-    response  = test_planner_tool()
+    
+    #response1  = test_planner_tool()
+
+
+    response2  = test_planner( llm )
+
+    print( response2 )
+
+
     print()
     

@@ -1,7 +1,12 @@
-<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>Presenter Output</title><script src='https://cdn.plot.ly/plotly-2.35.2.min.js'></script><style>body{font-family:Arial,sans-serif;margin:16px;}section{margin-bottom:24px;padding:12px;border:1px solid #ddd;border-radius:6px;}pre{white-space:pre-wrap;word-break:break-word;}</style></head><body><h1>Presented Output</h1><section><h3>Production Contributions Analysis</h3><pre>The contributions to the total production of all wells are as follows:
+<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>Presenter Output</title><script src='https://cdn.plot.ly/plotly-2.35.2.min.js'></script><style>body{font-family:Arial,sans-serif;margin:16px;}section{margin-bottom:24px;padding:12px;border:1px solid #ddd;border-radius:6px;}pre{white-space:pre-wrap;word-break:break-word;}</style></head><body><h1>Presented Output</h1><section><h3>Injector Efficiency Ranking and Explanation</h3><pre>The injectors have been ranked based on their efficiency, which is defined as the ratio of the total attributable oil produced (resulting from injection) to the total water injected. The results are as follows:
 
-- Injection: 39.89%
-- Pressure: 10.00%
-- Primary Depletion: 50.11%
+1. **Injector I3**: Efficiency = 0.647 (64.7%), with 92.96 units of oil attributed to 143.7 units of water injected.
+2. **Injector I1**: Efficiency = 0.448 (44.8%), with 374.68 units of oil attributed to 836.0 units of water injected.
+3. **Injector I2**: Efficiency = 0.280 (28.0%), with 100.80 units of oil attributed to 360.0 units of water injected.
 
-These percentages are based on the modeled production data. A pie chart has been generated to visually represent these contributions.</pre></section><section><h3>Production contributions percentages</h3><div id="plot_2" style="width:100%;height:500px;"></div><script>(function(){var fig={"data": [{"type": "pie", "labels": ["injection_percentage", "pressure_percentage", "depletion_percentage"], "values": [39.88505747126437, 10.0, 50.114942528735625], "hole": 0.0}], "layout": {"title": {"text": "Percentage contributions to total production"}}, "config": {"responsive": true, "displaylogo": false}};if(window.Plotly){Plotly.newPlot('plot_2', fig.data||[], fig.layout||{}, fig.config||{responsive:true});}})();</script></section></body></html>
+### Explanation of Efficiency Calculation:
+Efficiency is computed as the ratio of the total oil production attributed to an injector to the total water injected by that injector. The attributable oil production is determined by summing the contributions from all producers connected to the injector. For each producer, the contribution is calculated as:
+
+\[ \text{Attributable Oil} = \text{GAIN} \times \text{Producer's Liquid Production} \times \text{Oil Fraction} \]
+
+The total water injected is derived from the sum of the product of GAIN and the producer's liquid production for all connected producers. The efficiency metric provides insight into how effectively an injector contributes to oil production relative to the amount of water it injects.</pre></section></body></html>

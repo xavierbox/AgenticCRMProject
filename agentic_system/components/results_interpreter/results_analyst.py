@@ -1240,8 +1240,9 @@ class ResultsAnalyst:
 
         response = agent.invoke(
             {
-                "messages": llm_messages
-            } # type: ignore
+                "messages": llm_messages,
+               
+            },  config={"recursion_limit": 60} # type: ignore
         )
 
         if self.config.structured_output:

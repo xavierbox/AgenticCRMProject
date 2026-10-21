@@ -107,7 +107,7 @@ class ReactSystem:
         self.query, self.previous_query = None, None 
         self.response = None 
         self.prompt = prompt if not prompt is None else react_prompt_template
-        self.planner_component = get_default_planner()
+        self.planner_component = get_default_planner( llm )
         self.direct_answer = get_default_direct_answer( llm )
         self.results_analyst = get_default_results_analyst(self.llm)
        
@@ -119,6 +119,7 @@ class ReactSystem:
         self.components =[
             self.planner_component,
             self.direct_answer,
+
             self.results_analyst,
             self.analyst,
             self.presenter
@@ -183,6 +184,13 @@ class ReactSystem:
             flush=True,
         )
         return response 
+
+
+    def generate_plan(self,query: str, current_state: ExecutorState | None = None):
+        plan = self.planner_component.run(query, current_state)
+        self.plan = plan
+        return plan 
+
 
     def run_with_deterministic_executor(
         self,
@@ -377,7 +385,7 @@ if __name__ == "__main__":
     #query="""Make a summary of the quality of the simulations and show in a pie chart  
     #the percent of the total production of all the wells combined that is due to injectionm, pressure and primary depletion"""
 
-    query="""from the simulation results show in a pie chart the percent of the total production of all the wells combined that is due to injection, pressure and primary depletion"""
+    #query="""from the simulation results show in a pie chart the percent of the total production of all the wells combined that is due to injection, pressure and primary depletion"""
 
     #query="""Can you show in a bar chart the percent of production volumes currently (oil, gas and water)
     #from the data in the simulation results? 
@@ -408,12 +416,33 @@ if __name__ == "__main__":
     #query="Explain what VRR is and then checkl if we used a balanced model or an unbalanced?"
 
     #query = "Give me a summary of the simulation results. Focus on weird values and channeling potential"
-        
+
+    #query=""""How many wells are there, split injectors and producers by subzone and sector?"""
+    #query=""""whats the best supported producer?"""
+
+    query = "rank the injectors according to their efficiency. State how the efficiency is compouted "
+           
     #response =  agent.run( query )
     import pickle
     from pathlib import Path
 
-    # 1) Run deterministic executor without presenter
+
+    # 1) Run deterministic executor without presenter 
+    
+    #response = agent.run_with_deterministic_executor(query, run_presenter=False)
+    #execution_state = agent.execution_state
+    #print(100 * '+' )
+    #print("The agent found an answer")
+    #print(100 * '-' )
+        
+    #print(100 * '+' )
+    #print("Now calling the tricky presentation for the UI")
+    #presenter_only_response = PresenterComponent4(llm=llm).run(execution_state)
+    #print(presenter_only_response)
+    #print(100 * '-' )
+        
+
+
     response = agent.run_with_deterministic_executor(query, run_presenter=False)
     execution_state = agent.execution_state
 

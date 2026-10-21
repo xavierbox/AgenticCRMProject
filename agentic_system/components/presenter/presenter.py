@@ -48,16 +48,21 @@ adapter = TypeAdapter(list[TaskResult])
 #########################################################
 ##########  test models for charts strict ###############
 #########################################################
+
+# all of these were added because it was a pain in the neck to get something 
+# reliable from the _chart-plan. Fixing the schema sorted it out 
+#  
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StrictStr
 
 
 class StrictModel(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="allow")
 
 
 # ---------- Plot arguments ----------
+
 
 class BarArgs(StrictModel):
     x: StrictStr
@@ -1825,7 +1830,7 @@ class PresenterComponent4:
 
         print("Processing dataframe result with shape:", df.shape)
         print( df )
-        
+
 
         if nrows <= -2 and ncols <= 2:
         #if nrows <= 5 and ncols <= 5:
