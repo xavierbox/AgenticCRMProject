@@ -622,7 +622,119 @@ class ResultsAnalystTools:
         - Returned rows are always the first rows and may be truncated.
         """
 
-    def retrieve_table(self, table_name:str, max_number_of_rows:int | None = None )->str:
+        
+    def retrieve_table(
+        self,
+        table_name: str,
+        max_number_of_rows: int | None = None,
+    ) -> str:
+        """
+        Retrieve a table preview, or return a recoverable missing-table message.
+        """
+        print(
+            "\n\t[TOOL]\n"
+            "\tcaller=results_analyst\n"
+            "\ttool=retrieve_table\n"
+            f"\targs={{'table_name': {table_name!r}, "
+            f"'max_number_of_rows': {max_number_of_rows!r}}}",
+            flush=True,
+        )
+
+        if max_number_of_rows is not None:
+            if (
+                isinstance(max_number_of_rows, bool)
+                or not isinstance(max_number_of_rows, int)
+            ):
+                raise TypeError(
+                    "max_number_of_rows must be a positive integer or None."
+                )
+            if max_number_of_rows <= 0:
+                raise ValueError(
+                    "max_number_of_rows must be a positive integer or None."
+                )
+
+        # Handle both lookup errors and a missing-table return value.
+        lookup_error = None
+
+        try:
+            df = self._smart_data.get_df(table_name)
+        except (KeyError, LookupError) as exc:
+            df = None
+            print('----------------ERROR----------',table_name,'---------------------')
+            lookup_error = str(exc)
+            print( lookup_error )
+
+        if df is None:
+            message = (
+                "Status: table_unavailable\n"
+                f"Requested table: {table_name}\n"
+                "No records were retrieved. This does not mean the table "
+                "exists and is empty.\n"
+                "Check the current table catalog for the exact registered "
+                "table name and available alternatives.\n"
+                "Do not repeat this request with the same name unless its "
+                "availability has been confirmed. Continue with other "
+                "available tables where possible, and state any resulting "
+                "limitations in the answer.\n"
+            )
+
+            if lookup_error:
+                message += f"Lookup detail: {lookup_error}\n"
+
+            return message
+
+        # Description is optional; its absence must not block table retrieval.
+        description = "Description unavailable."
+
+        try:
+            descriptions = (
+                self._smart_data.get_single_table_brief_description(table_name)
+            )
+
+            if isinstance(descriptions, dict):
+                description = descriptions.get(table_name) or description
+
+        except Exception as exc:
+            print(
+                f"[retrieve_table] Description unavailable for "
+                f"{table_name!r}: {type(exc).__name__}: {exc}",
+                flush=True,
+            )
+
+        total_rows = len(df)
+        effective_limit = (
+            1500
+            if max_number_of_rows is None
+            else min(max_number_of_rows, 1500)
+        )
+        returned_rows = min(effective_limit, total_rows)
+        truncated = returned_rows < total_rows
+
+        metadata = (
+            "Status: success\n"
+            f"Table: {table_name}\n"
+            f"Description: {description}\n"
+            f"Total rows: {total_rows}\n"
+            f"Returned rows: {returned_rows}\n"
+            f"Truncated: {str(truncated).lower()}\n"
+        )
+
+        if truncated:
+            metadata += (
+                "Only the first rows are shown; they are not a representative "
+                "sample. Do not infer whole-table statistics from this preview. "
+                "Use sql_materialize to aggregate or filter the full table.\n"
+            )
+
+        return (
+            metadata
+            + "Records:\n"
+            + df.head(returned_rows).to_csv(index=False)
+        )
+
+
+        
+    def old_retrieve_table(self, table_name:str, max_number_of_rows:int | None = None )->str:
 
         """
         Retrieves a table by name for further analysis
@@ -1238,12 +1350,19 @@ class ResultsAnalyst:
         llm_messages = list(messages or [])
         llm_messages.append({'role': 'user', 'content': query})
 
+        
         response = agent.invoke(
-            {
-                "messages": llm_messages,
-               
-            },  config={"recursion_limit": 60} # type: ignore
+        {
+            "messages": llm_messages,
+        },
+        config={"recursion_limit": 200},
         )
+        
+        #response = agent.invoke(
+        #    {
+        #        "messages": llm_messages
+        #    } # type: ignore
+        #)
 
         if self.config.structured_output:
 

@@ -43,6 +43,16 @@ A project contains three main types of information:
 
 
 ===============================================================================
+IMPORTANT
+===============================================================================
+
+- You should NEVER attempt to answer questions on hypothetical scenarios: Infor the user that you dont  have that capability at this stage with a direct answer 
+- Do not attempt either to answer questions on well conformance: Infor the user that you dont have the context fopr that today with a direct answer  
+
+
+
+
+===============================================================================
 APPLICATION-SPECIFIC TERMINOLOGY
 ===============================================================================
 

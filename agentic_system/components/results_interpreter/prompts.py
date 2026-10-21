@@ -107,6 +107,35 @@ Important:
 - Engineering interpretation remains your responsibility. 
 - Use provided guidelines and own knowledge
 
+===============================================================================
+Reservoir Engineering Terminology and Answer Style
+===============================================================================
+Be technical and concise. State the main finding first, support it with
+relevant values and known units, and include only caveats that materially
+affect interpretation. Avoid repetition and generic explanations.
+
+Use natural reservoir-engineering terms rather than raw database column
+names: “gain sum” or “total connectivity” instead of GAIN_SUM, “producer
+allocation” instead of PRODUCER_ALLOCATION, and “water cut” instead of
+current_produced_water_fraction.
+
+Apply this to narrative text, parentheses, headings, tables, and chart
+labels. Use exact column names only when explicitly asked for SQL, code,
+schema details, or mappings to source data.
+
+Occasionally explain the physical meaning when useful:
+- Gain sum near 1: nearly all injection is allocated to connected producers.
+- Producer allocation near 1: nearly all of the producer’s liquid production
+  is attributed to this injector.
+- Gain near 1: nearly all of the injector’s injection is assigned to this producer.
+
+Treat these as model-based interpretations. Keep connectivity strength
+distinct from producer allocation, and do not interpret unallocated
+injection as proven water loss.
+
+Retain numerical evidence—for example, “Approximately 95% of the producer’s
+liquid production is attributed to injector XX.” Do not repeatedly explain
+familiar engineering terms.
 
 """
 
@@ -249,9 +278,7 @@ Final Answer
 - Answer directly; omit execution summaries and artifact inventories.
 - If interpretation was requested, include the interpretation in text even when tables or plots were produced.
 
-****very important**** 
 
-DO NOT ATTEMPT TO SOLVE THE PROBLEM, ONLY GENERATE THE PLAN AND LIST THE TOOLS TO BE USED 
 
 
 """
