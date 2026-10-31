@@ -738,7 +738,7 @@ class SmartData(BaseDataComponent):
 
         return self
 
-    def update_metadata(self, metadata: Any | None = None) -> Self:
+    def update_metadata(self, metadata: Any = None) -> Self:
 
         super().update_metadata(metadata)
 
@@ -1116,7 +1116,24 @@ class SmartDataTools(BaseDomainTools[SmartData]):
             return f"Table {derived_table_name} **IS NOT in the catalog** and **CANNOT** be reused. "
 
 
+    def table_exists_in_catalog(self, table_name: str) -> bool:
+        """
+        Check whether a table name exists in the current catalog.
 
+        Checks both base and derived tables using an exact,
+        case-sensitive name match. Does not query table contents.
+
+        Args:
+            table_name: Exact table name to check.
+
+        Returns:
+            True if the table is in the catalog; otherwise False.
+        """
+        print(["table_exists_in_catalog", table_name])
+
+        return table_name in self._get_table_names()
+
+    
 
 class MockDataDrivenStorage:
         
@@ -1153,13 +1170,64 @@ class MockDataDrivenStorage:
 
 
 
+import pandas as pd
+from sklearn.neighbors import KDTree
+
+
+def build_distances(locations: pd.DataFrame, radius: float = 10000) -> pd.DataFrame:
+    columns = ["PRODUCER", "INJECTOR", "DISTANCE", "SUBZONE", "PRODUCER_SECTOR"]
+    results = []
+
+    valid = locations.dropna(subset=["X", "Y", "SUBZONE"])
+
+    for subzone, wells in valid.groupby("SUBZONE"):
+        producers = wells.loc[wells["WELL_TYPE"].eq("Producer")]
+        injectors = wells.loc[wells["WELL_TYPE"].eq("Injector")]
+
+        if producers.empty or injectors.empty:
+            continue
+
+        tree = KDTree(injectors[["X", "Y"]].to_numpy(dtype=float))
+
+        indices, distances = tree.query_radius(
+            producers[["X", "Y"]].to_numpy(dtype=float),
+            r=radius,
+            return_distance=True,
+            sort_results=True,
+        )
+
+        producer_names = producers["NAME"].to_numpy()
+        producer_sectors = producers["SECTOR"].to_numpy()
+        injector_names = injectors["NAME"].to_numpy()
+
+        for producer, sector, injector_indices, pair_distances in zip(
+            producer_names, producer_sectors, indices, distances
+        ):
+            results.extend(
+                {
+                    "PRODUCER": producer,
+                    "INJECTOR": injector_names[injector_index],
+                    "DISTANCE": float(distance),
+                    "SUBZONE": subzone,
+                    "PRODUCER_SECTOR": sector,
+                }
+                for injector_index, distance in zip(injector_indices, pair_distances)
+            )
+
+    return pd.DataFrame(results, columns=columns)
+
+
 
 def get_default_data():
     inj, prod,locs = MockDataDrivenStorage( None ).get_project_dataset()
-    return inj, prod,locs
+    distances = build_distances(locs, radius=10000)
+    print( distances.head(5) )
+
+
+    return inj, prod,locs, distances
 
 def get_default_smart_data():
-    inj, prod,locs =get_default_data()
+    inj, prod,locs, distances =get_default_data()
 
     print( inj.head(4))
     print( prod.head(4))

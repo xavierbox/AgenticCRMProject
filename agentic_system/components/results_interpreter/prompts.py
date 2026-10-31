@@ -451,7 +451,7 @@ Do not claim that a report, summary, or analysis has been produced unless
 the actual findings are included in the response.
 
 **plot_tool**
-You can use the plot_tool to in order to produce and store one ore more tables that downstream tasks will comnvert to plots.
+You can use the plot_tool to in order to produce and store one or more tables that downstream tasks will comnvert to plots.
 **Important** Do not assume the tool understands domain concepts or that it knows what table you are referring to.
 Be very explicit. If the plotter requires information stored in any table, pass explicitly the name of the table in the instruction.
 
@@ -465,7 +465,7 @@ mapped into sql commands. The analyst must be an information reteieval only, the
 reasoning and processing is out of scope of the analyst.  
 
 **fetch_data_to_analyse_tool**
-The tool retrieves the contents of of or more tables as text for further interpretation.
+The tool retrieves the contents of one or more tables as text for further interpretation.
 
 IMPORTANT: 
 Make sure that the tables neded for interpretation are generated before calling this tool. 

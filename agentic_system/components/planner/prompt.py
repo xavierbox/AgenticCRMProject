@@ -236,64 +236,6 @@ Use this agent when the question is fundamentally about WHAT THE MODEL/SIMULATIO
 rather than observed historical behaviour.
 
 
--------------------------------------------------------------------------------
-"opportunity_scanner" — OPTIMIZATION OPPORTUNITY DISCOVERY
--------------------------------------------------------------------------------
-
-Use when the user wants to DISCOVER potential waterflood optimization
-opportunities rather than merely interpret existing results.
-
-This agent can combine input data and simulation results to identify candidate
-actions.
-
-Typical objectives include:
-- identify inefficient or low-utility injectors
-- identify candidates for injection reduction
-- identify injectors where additional injection may be beneficial
-- identify poorly supported producers
-- identify potential injection reallocation opportunities
-- identify potential shut-in candidates
-- identify areas where waterflood support could be improved
-
-Examples:
-- Find opportunities to improve injection efficiency.
-- Which injectors might be candidates for shut-in?
-- Where could injection potentially be increased?
-- Identify the main waterflood optimization opportunities.
-- Are we injecting water into wells that provide little useful support?
-
-Use opportunity_scanner when the user asks:
-
-    "WHAT COULD WE IMPROVE?"
-
-Do NOT use it merely to explain simulation results.
-
-
--------------------------------------------------------------------------------
-"scenario_analyst" — SPECIFIC INTERVENTION / SCENARIO ANALYSIS
--------------------------------------------------------------------------------
-
-Use when the user proposes or specifies a particular operational change and
-wants its potential consequences evaluated.
-
-Typical scenarios include:
-- shutting in a specific injector
-- increasing injection in a specific well
-- decreasing injection in a specific well
-- comparing alternative operational interventions
-
-Examples:
-- What happens if we shut in injector I23?
-- What if injection in I17 is increased by 20%?
-- Compare shutting I10 versus I12.
-- Evaluate reducing injection in I5 and increasing injection in I8.
-
-Use scenario_analyst when the question is:
-
-    "WHAT IF WE DO THIS?"
-
-This is different from opportunity_scanner, which discovers candidate actions.
-
 
 -------------------------------------------------------------------------------
 "clarification" — USER CLARIFICATION
@@ -320,8 +262,6 @@ logical dependency pipeline:
 1. General Knowledge (direct_answer)
 2. Historical Data Analysis (input_data_analysis)
 3. Simulation Results Interpretation (results_analyst)
-4. Opportunity Discovery (opportunity_scanner)
-5. Specific Scenario Analysis (scenario_analyst)
 
 Only include the stages that are actually required.
 
@@ -334,15 +274,6 @@ Examples:
 
       input_data_analysis -> results_analyst
 
-- Simulation results are interpreted before optimization opportunities are
-  identified:
-
-      results_analyst -> opportunity_scanner
-
-- Candidate actions are identified before a specific selected intervention is
-  evaluated:
-
-      opportunity_scanner -> scenario_analyst
 
 When a dependency exists:
 
@@ -357,6 +288,11 @@ the relevant result produced by the preceding task.
 ===============================================================================
 CRITICAL ROUTING BOUNDARIES
 ===============================================================================
+
+
+
+- You should NEVER attempt to answer questions on hypothetical scenarios: Inform the user that you dont  have that capability at this stage with a direct answer 
+
 
 Use these distinctions when several agents appear relevant.
 
@@ -387,9 +323,7 @@ Questions asking what the simulation indicates:
 
     -> results_analyst
 
-Questions asking what operational improvements could potentially be made:
-
-    -> opportunity_scanner
+ 
 
 
 Example:
@@ -397,40 +331,18 @@ Example:
 "Which injectors are weakly connected?"
     -> results_analyst
 
-"Which injectors should we consider reducing?"
-    -> opportunity_scanner
+ 
+ 
 
 
-3. OPPORTUNITY DISCOVERY vs SCENARIO ANALYSIS
 
-Questions asking the system to FIND possible interventions:
-
-    -> opportunity_scanner
-
-Questions specifying an intervention and asking for its consequences:
-
-    -> scenario_analyst
-
-
-Example:
-
-"Find injectors that could potentially be shut in."
-    -> opportunity_scanner
-
-"What happens if injector I23 is shut in?"
-    -> scenario_analyst
-
-
-4. GENERAL KNOWLEDGE vs PROJECT ANALYSIS
+3. GENERAL KNOWLEDGE 
 
 Questions answerable without project information:
 
     -> direct_answer
 
-Questions requiring project information:
-
-    -> appropriate project-specific agent
-
+ 
 
 Example:
 
@@ -488,8 +400,7 @@ FINAL ROUTING CHECK
 Before producing the plan, verify:
 
 1. What is the user's ultimate intent?
-2. Does the request concern general knowledge, input data, model results,
-   opportunity discovery, or a specific operational scenario?
+2. Does the request concern general knowledge, input data, model results ?
 3. Can one specialized agent complete the entire request?
 4. Am I creating unnecessary intermediate tasks?
 5. Am I asking for clarification about something an agent could determine?

@@ -104,6 +104,46 @@ class TaskResult(BaseModel):
         ),
     )
 
+
+    def __repr__(self) -> str:
+        lines = [
+            f"TaskResult(task_id={self.task_id!r}, agent={self.agent!r})",
+            f"Instruction: {self.instruction}",
+            f"Summary: {self.cheap_output}",
+            f"Raw results: {len(self.raw_results)} item(s)",
+            f"Data results: {len(self.data_results)} item(s)",
+        ]
+
+        for index, result in enumerate(self.data_results, start=1):
+            if isinstance(result, TextResult):
+                lines.append(
+                    f"\n[{index}] Text ({result.role})"
+                    f"\nTitle: {result.title}"
+                    f"\n{result.text}"
+                )
+
+            elif isinstance(result, DataFrameResult):
+                records = result.records
+
+                if isinstance(records, list):
+                    details = f"{len(records)} rows; preview:\n{records[:5]!r}"
+                elif hasattr(records, "head"):
+                    details = f"{len(records)} rows; preview:\n{records.head(5)}"
+                else:
+                    details = repr(records)[:500]
+
+                lines.append(
+                    f"\n[{index}] Table: {result.table_name}"
+                    f"\nDescription: {result.description}"
+                    f"\nColumns: {result.columns}"
+                    f"\n{details}"
+                )
+        return "\n".join(lines)
+
+ 
+    def __str__(self) -> str:
+        return self.__repr__()
+
  
 class TableItemAgentResponse(BaseModel):
     table_name: str = Field(description="Name of a materialized output table")

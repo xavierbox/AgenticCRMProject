@@ -17,6 +17,7 @@ sys.path.append("./")  # Add the parent directory to the Python path
 sys.path.append("../")  # Add the parent directory to the Python path
 sys.path.append("../../")  # Add the parent directory to the Python path
 
+from dataclasses import dataclass, field
 
 from langchain_core.messages import HumanMessage, AIMessage, AnyMessage
 from langchain_core.tools import StructuredTool
@@ -25,7 +26,10 @@ from langchain.agents.structured_output import ToolStrategy
 from agentic_system.common.base_task import AgentTableResponse, DataFrameResult, TaskExecutionContext, TaskResult, TextResult
 from agentic_system.common.get_llm import azure_llm_if
 from agentic_system.common.data_component import BaseDomainTools, MockDataDrivenStorage, SmartData, SmartDataTools, get_default_data, get_default_smart_data
+
 from agentic_system.components.data_analyst.known_tables_models import inj_prod_locs_semantic_catalog 
+from agentic_system.components.data_analyst.known_idioms  import idioms 
+
 #from agentic_system.components.data_analyst.known_idioms import idioms as all_idioms
 from agentic_system.common.semantic_models import CatalogTablesSnapshot, SemanticCatalog
 
@@ -33,14 +37,27 @@ from agentic_system.components.data_analyst.prompts import input_data_anayst_pro
 from agentic_system.common.get_llm import azure_llm_if as get_llm
 
 
-
+@dataclass 
 class InputDataAnalystConfig:
-    constraints:str     = "- WELL_TYPE domain is restricted to exactly two values: 'Injector' and 'Producer'.\n- Each well belongs to exactly one WELL_TYPE category (mutually exclusive).\n- Well identifiers are stored in NAME and used consistently as join keys across tables.\n- injectors.NAME joins to locations.NAME only for rows where locations.WELL_TYPE = 'Injector'.\n- producers.NAME joins to locations.NAME only for rows where locations.WELL_TYPE = 'Producer'.\n- All volume measures are non-negative (WATER_INJECTION_VOLUME, LIQUID_VOLUME, WATER_VOLUME, OIL_VOLUME, GAS_VOLUME).\n- Production balance constraint: LIQUID_VOLUME is approximately WATER_VOLUME + OIL_VOLUME + GAS_VOLUME (allowing small numerical tolerance).\n- If YEAR, MONTH, DAY are present, they should match the corresponding DATE components.\n"
-    idiom_context:str   = '- date subtraction: Use column - INTERVAL \'X days/months\'. NEVER use DATE_SUB() or DATEADD().\n- date truncation: Use DATE_TRUNC(\'month\', column).\n- reserved keywords: Always wrap the column name "DATE" in double quotes to avoid Binder Errors.\n- string concatenation: Use the || operator or CONCAT().\n- boolean aggregation: Use FILTER clauses or BOOL_OR() / BOOL_AND() for cleaner logic.\n- nested aggregates: Avoid nested aggregates—never wrap MAX/MIN inside SUM/AVG/etc. Example: WITH current_year AS (SELECT EXTRACT(YEAR FROM MAX("DATE")) AS year FROM injectors), yearly_totals AS (...), yoy AS (...) SELECT ... FROM ... WHERE YEAR = (SELECT year FROM current_year)\n- cte helpers: Use CTEs to capture helper scalars (like current_year via MAX("DATE")) before performing group aggregations. For example:\n    WITH current_year AS (SELECT EXTRACT(YEAR FROM MAX("DATE")) AS year FROM injectors),\n         yearly_totals AS (...),\n         yoy AS (...)\n    SELECT ... FROM ... WHERE YEAR = (SELECT year FROM current_year)\n'
-    semantic_catalog:SemanticCatalog = SemanticCatalog.model_validate(inj_prod_locs_semantic_catalog)
     prompt_template:str = input_data_anayst_prompt_template
-    idiom:str  = 'duckdb'
-    use_structured_output : bool | None = True 
+    use_structured_output : bool  = True 
+    max_num_derived_tables: int = 10 # not used yet
+    idiom: str  = 'duckdb'
+
+    #semantic_catalog:SemanticCatalog = SemanticCatalog.model_validate(inj_prod_locs_semantic_catalog)
+    semantic_catalog: SemanticCatalog = field(default_factory=lambda: SemanticCatalog.model_validate(inj_prod_locs_semantic_catalog))
+
+
+    semantic_constraints:str   = field( init = False )#   = "- WELL_TYPE domain is restricted to exactly two values: 'Injector' and 'Producer'.\n- Each well belongs to exactly one WELL_TYPE category (mutually exclusive).\n- Well identifiers are stored in NAME and used consistently as join keys across tables.\n- injectors.NAME joins to locations.NAME only for rows where locations.WELL_TYPE = 'Injector'.\n- producers.NAME joins to locations.NAME only for rows where locations.WELL_TYPE = 'Producer'.\n- All volume measures are non-negative (WATER_INJECTION_VOLUME, LIQUID_VOLUME, WATER_VOLUME, OIL_VOLUME, GAS_VOLUME).\n- Production balance constraint: LIQUID_VOLUME is approximately WATER_VOLUME + OIL_VOLUME + GAS_VOLUME (allowing small numerical tolerance).\n- If YEAR, MONTH, DAY are present, they should match the corresponding DATE components.\n"
+    idiom_examples:str = field( init = False )# '- date subtraction: Use column - INTERVAL \'X days/months\'. NEVER use DATE_SUB() or DATEADD().\n- date truncation: Use DATE_TRUNC(\'month\', column).\n- reserved keywords: Always wrap the column name "DATE" in double quotes to avoid Binder Errors.\n- string concatenation: Use the || operator or CONCAT().\n- boolean aggregation: Use FILTER clauses or BOOL_OR() / BOOL_AND() for cleaner logic.\n- nested aggregates: Avoid nested aggregates—never wrap MAX/MIN inside SUM/AVG/etc. Example: WITH current_year AS (SELECT EXTRACT(YEAR FROM MAX("DATE")) AS year FROM injectors), yearly_totals AS (...), yoy AS (...) SELECT ... FROM ... WHERE YEAR = (SELECT year FROM current_year)\n- cte helpers: Use CTEs to capture helper scalars (like current_year via MAX("DATE")) before performing group aggregations. For example:\n    WITH current_year AS (SELECT EXTRACT(YEAR FROM MAX("DATE")) AS year FROM injectors),\n         yearly_totals AS (...),\n         yoy AS (...)\n    SELECT ... FROM ... WHERE YEAR = (SELECT year FROM current_year)\n'
+   
+
+    def __post_init__(self):
+
+        self.semantic_constraints   = "\n".join(self.semantic_catalog.semantic_constraints) 
+        self.idiom_examples = "\n".join(  f"{key}: {value}\n" for key,value in idioms[self.idiom].items() )
+
+
 
         
 class InputDataAnalyst:
@@ -143,10 +160,6 @@ class InputDataAnalyst:
         return self._smart_data.get_table_as_df(table_name)
 
 
-
-
-    
-
     @property
     def description(self) -> str | None:
         """Returns the properly formatted class docstring."""
@@ -168,16 +181,28 @@ class InputDataAnalyst:
         if not domain_tools is None :
             self.tools = self.tools + self.domain_tools.get_agent_tools() # type: ignore
 
-    def update_data(self, tables:Any):
+    def update_data(self, tables: dict[str,pd.DataFrame]):
+        """
+        Updates the data and the metadata. 
+        For the metadata, it only add the entries from the known tables that match a table name in the data dictionary.
+        For instance, a known table "distances" will not be added as metadata if tables[str,pd.Dataframe] doest contain "distances"
+        """
         self._smart_data.clear()#update_data( tables )
-        metadata =  {t.name:t for t in self.config.semantic_catalog.tables}
+        table_names = tables.keys()
+        metadata =  {t.name:t for t in self.config.semantic_catalog.tables if t.name in table_names}
+
+        missing_tables = set(table_names) - set(metadata)
+        if missing_tables:
+            print(f"Tables not found in metadata: {', '.join(sorted(missing_tables))}")
+            print("This will raise an exception")
+                
         self._smart_data.set_data( tables, metadata)
  
     def _build_prompt( self ):
 
         prompt = self.config.prompt_template.format(idiom = self.config.idiom, 
-                                    idiom_examples = self.config.idiom_context, 
-                                    constraints = self.config.constraints)
+                                    idiom_examples = self.config.idiom_examples, 
+                                    constraints = self.config.semantic_constraints)
 
         return prompt 
 
@@ -213,30 +238,6 @@ class InputDataAnalyst:
                 for task_id in task_ids
             ]
         )
-
-
-    def old_build_context_from_task_ids(self,task_ids:list[str]|None=None):
-
-        # fetch from artifact storage the task ids 
-        # create a TaskExecutionContext with 
-        # dependencies
-
-        if not task_ids is None and self.artifact_storage is not None:
-           
-            storage = self.artifact_storage
-            dependency_results = []
-            for task_id in task_ids:
-
-                task_result = storage.get(task_id, None)
-                dependency_results.append(task_result)
-
-            context = TaskExecutionContext(
-                dependency_results=dependency_results
-            )
-
-            return context
-
-        return None 
 
     def build_textual_context_from_previous_tasks(
         self,
@@ -325,8 +326,7 @@ class InputDataAnalyst:
             context_parts.append("\n\n".join(parts))
 
         return "\n\n---\n\n".join(context_parts) or None
-    
-    
+      
     def response_as_text( self, llm_response ):
         return "implementation missing"
     
@@ -521,27 +521,40 @@ def get_default_analyst1():
     return analyst
 
 
-
-
 if __name__ == "__main__":
 
+    input_analyst_config = InputDataAnalystConfig()
 
-    inj, prod,locs =get_default_data()
-
-    analyst = InputDataAnalyst( llm = get_llm(), config = InputDataAnalystConfig() )
-    analyst.update_data( {'injectors':inj,'producers':prod, 'locations':locs } )
-
-    #response = analyst.run("how many wells are there per well type sector and subzone?")
-    
-    query  = "show the well count per subzone and well type. Also, show the total liquid production per year in another table. Can you define VRR>?"
-    query  = "List wells with high watercut ( above 0.01 )"
-    
-    response = analyst.run(query)
-
-    print( response.model_dump() )
-    
-
+    print(input_analyst_config.idiom)
+    print(input_analyst_config.idiom_examples)
+    print(input_analyst_config.semantic_constraints)
     print()
+
+    inj, prod,locs, distances =get_default_data()
+    analyst = InputDataAnalyst( llm = get_llm(), config = InputDataAnalystConfig() )
+    analyst.update_data( {'injectors':inj,'producers':prod, 'locations':locs, 'distances':distances } )
+    
+    print( analyst.catalog_textual_snapshot())
+    
+    #response = analyst.run("how many wells are there per well type sector and subzone?")   
+    #query  = "show the well count per subzone and well type. Also, show the total liquid production per year in another table. Can you define VRR>?"
+    #query  = "List wells with high watercut ( above 0.01 )"
+    #print(response)
+
+    #response = analyst.run("how many more injectors than producers are there?")   
+    #query  = "show the well count per subzone and well type. Also, show the total liquid production per year in another table. Can you define VRR>?"
+    #query  = "List wells with high watercut ( above 0.01 )"
+    #print(response)
+    
+    response = analyst.run("Whats the mean distance between a producer and its first and third closest injector per subzone and sector? ")   
+    #query  = "show the well count per subzone and well type. Also, show the total liquid production per year in another table. Can you define VRR>?"
+    #query  = "List wells with high watercut ( above 0.01 )"
+    print(response)
+    
+
+    # Fix this! Why doesnt it reuse the tables?
+    # why so many calls to the catalog. 
+
 
  
 

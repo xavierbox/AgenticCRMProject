@@ -51,13 +51,33 @@ class ResultsAnalystConfig( ):
 
     idiom_context:str   = '- date subtraction: Use column - INTERVAL \'X days/months\'. NEVER use DATE_SUB() or DATEADD().\n- date truncation: Use DATE_TRUNC(\'month\', column).\n- reserved keywords: Always wrap the column name "DATE" in double quotes to avoid Binder Errors.\n- string concatenation: Use the || operator or CONCAT().\n- boolean aggregation: Use FILTER clauses or BOOL_OR() / BOOL_AND() for cleaner logic.\n- nested aggregates: Avoid nested aggregates—never wrap MAX/MIN inside SUM/AVG/etc. Example: WITH current_year AS (SELECT EXTRACT(YEAR FROM MAX("DATE")) AS year FROM injectors), yearly_totals AS (...), yoy AS (...) SELECT ... FROM ... WHERE YEAR = (SELECT year FROM current_year)\n- cte helpers: Use CTEs to capture helper scalars (like current_year via MAX("DATE")) before performing group aggregations. For example:\n    WITH current_year AS (SELECT EXTRACT(YEAR FROM MAX("DATE")) AS year FROM injectors),\n         yearly_totals AS (...),\n         yoy AS (...)\n    SELECT ... FROM ... WHERE YEAR = (SELECT year FROM current_year)\n'
 
+    # works 3.10 but not 3.11     
     #constraints and table models
-    semantic_catalog:SemanticCatalog = SemanticCatalog.model_validate(interpreter_semantic_catalog)
-
+    #semantic_catalog:SemanticCatalog = SemanticCatalog.model_validate(interpreter_semantic_catalog)
     #interpretation context
-    semantic_context:ResultsInterpreterSemanticContext = ResultsInterpreterSemanticContext.model_validate(interpreter_semantic_context)
+    #semantic_context:ResultsInterpreterSemanticContext = ResultsInterpreterSemanticContext.model_validate(interpreter_semantic_context)
+    #constraints: str = "\n".join(semantic_catalog.semantic_constraints)
+    #idiom:str  = 'duckdb'
+
+        
+    semantic_catalog: SemanticCatalog = field(
+        default_factory=lambda: SemanticCatalog.model_validate(
+            interpreter_semantic_catalog
+        )
+    )
+        
+        
+    semantic_context: ResultsInterpreterSemanticContext = field(
+        default_factory=lambda: ResultsInterpreterSemanticContext.model_validate(
+            interpreter_semantic_context
+        )
+    )
+
     constraints: str = "\n".join(semantic_catalog.semantic_constraints)
-    idiom:str  = 'duckdb'
+    idiom: str = "duckdb"
+        
+        
+
 
 
 def prepare_test_data( ) :
@@ -1057,10 +1077,19 @@ class ResultsAnalyst:
         llm_messages.append({'role': 'user', 'content': query})
 
         print("[agent.invoke] starting", flush=True)
+        #response = agent.invoke(
+        #    {
+        #        "messages": llm_messages
+        #    } # type: ignore
+        #)
+        
+        
+        
         response = agent.invoke(
             {
-                "messages": llm_messages
-            } # type: ignore
+                "messages": llm_messages,
+            },
+            config={"recursion_limit": 100},
         )
 
         print('[agent.invoke] finished', flush = True )

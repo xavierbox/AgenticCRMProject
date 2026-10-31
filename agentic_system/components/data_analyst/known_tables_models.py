@@ -247,7 +247,63 @@ inj_prod_locs_semantic_catalog = {
                     "description": "Link producer wells."
                 }
             ]
+        },
+
+        {
+    "name": "distances",
+    "description": "Distances between injector and producer wells. Each row represents one injector–producer pair.",
+    "kind": "base",
+    "columns": [
+        {
+            "name": "INJECTOR",
+            "data_type": "string",
+            "description": "Injector well identifier.",
+            "derived_column": False,
+            "business_rules": []
+        },
+        {
+            "name": "PRODUCER",
+            "data_type": "string",
+            "description": "Producer well identifier.",
+            "derived_column": False,
+            "business_rules": []
+        },
+        {
+            "name": "DISTANCE",
+            "data_type": "float",
+            "description": "Distance between the injector and producer wells.",
+            "derived_column": False,
+            "business_rules": [
+                "Distance must be nonnegative.",
+                "Distance units must be confirmed before applying unit conversions or distance thresholds."
+            ]
         }
+    ],
+    "relationships": [
+        {
+            "tables_involved": [
+                "well_distances",
+                "locations"
+            ],
+            "join_type": "left",
+            "join_condition": "well_distances.INJECTOR = locations.NAME AND locations.WELL_TYPE = 'Injector'",
+            "description": "Join to injector metadata. Use a separate locations alias for the injector. If locations contains multiple subzones per well, this join can return multiple rows per pair."
+        },
+        {
+            "tables_involved": [
+                "well_distances",
+                "locations"
+            ],
+            "join_type": "left",
+            "join_condition": "well_distances.PRODUCER = locations.NAME AND locations.WELL_TYPE = 'Producer'",
+            "description": "Join to producer metadata. Use a separate locations alias for the producer. If locations contains multiple subzones per well, this join can return multiple rows per pair."
+        }
+    ]
+}
+
+    
+    
+    
     ],
     "semantic_constraints": [
         "WELL_TYPE domain is restricted to exactly two values: 'Injector' and 'Producer'.",
@@ -256,7 +312,7 @@ inj_prod_locs_semantic_catalog = {
         "injectors.NAME joins to locations.NAME only for rows where locations.WELL_TYPE = 'Injector'.",
         "producers.NAME joins to locations.NAME only for rows where locations.WELL_TYPE = 'Producer'.",
         "All volume measures are non-negative (WATER_INJECTION_VOLUME, LIQUID_VOLUME, WATER_VOLUME, OIL_VOLUME, GAS_VOLUME).",
-        "Production balance constraint: LIQUID_VOLUME is approximately WATER_VOLUME + OIL_VOLUME + GAS_VOLUME (allowing small numerical tolerance).",
+        "Production balance constraint: LIQUID_VOLUME is approximately WATER_VOLUME + OIL_VOLUME  (allowing small numerical tolerance).",
         "If YEAR, MONTH, DAY are present, they should match the corresponding DATE components."
     ],
     "query_catalog": [
