@@ -699,8 +699,6 @@ def prepare_data_for_interpreter(crm_results):
     )
 
 
-
-
 def prepare_data_for_analyst( project_name ):
     storage = DataDrivenStorage( get_storage_config() ) 
     crm_dataset = storage.get_project_dataset( project_name )

@@ -521,6 +521,8 @@ def get_default_analyst1():
     return analyst
 
 
+
+
 if __name__ == "__main__":
 
 
@@ -535,6 +537,11 @@ if __name__ == "__main__":
     query  = "List wells with high watercut ( above 0.01 )"
     
     response = analyst.run(query)
+
+    print( response.model_dump() )
+    
+
+    print()
 
  
 
