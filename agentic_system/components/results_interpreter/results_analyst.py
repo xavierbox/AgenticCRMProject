@@ -83,12 +83,6 @@ class ResultsAnalystConfig( ):
         )
         
     
-    
-        
-    
-    
-    
-    
 
 def prepare_test_data( ) :
     import io
@@ -126,7 +120,7 @@ def prepare_test_data( ) :
 
     raw_data = {
         "connectivity_table": connectivity_table,
-        "simulation_quality_table": simulation_quality_table,
+        #"simulation_quality_table": simulation_quality_table,
         "producer_model_table": producer_model_table,
     }
 
@@ -438,7 +432,7 @@ class ResultsAnalystTools:
             StructuredTool.from_function(self.sql_materialize),
             StructuredTool.from_function(self.retrieve_table),
             StructuredTool.from_function(self.retrieve_tables),
-            StructuredTool.from_function(self.get_simulation_metadata),
+            #StructuredTool.from_function(self.get_simulation_metadata),
         ]
 
     def _get_simulation_well_names(self) -> tuple[list[str], list[str]]:
@@ -453,7 +447,7 @@ class ResultsAnalystTools:
         producers = sorted(df["PRODUCER"].dropna().astype(str).unique().tolist())
         return injectors, producers
 
-    def get_simulation_metadata(self) -> str:
+    def __get_simulation_metadata(self) -> str:
         """
         Returns metadata information about:
          - the simulation such as the training dates, 
@@ -563,7 +557,7 @@ class ResultsAnalystTools:
 
     def catalog_snapshot(
         self,
-        input_tables: None | str | Iterable[str] = None
+        input_tables: None | str | list[str] = None
     ) -> str:
         """
         Return an LLM-friendly textual snapshot of the data catalog.
@@ -602,12 +596,28 @@ class ResultsAnalystTools:
             f"\targs={{'input_tables': {input_tables!r}}}",
             flush=True,
         )
-        snapshot = self._smart_data.catalog_snapshot(input_tables)
-        formatted = self._format_catalog_snapshot( snapshot )
+        #snapshot = self._smart_data.catalog_snapshot(input_tables)
+        #formatted = self._format_catalog_snapshot( snapshot )
 
-        #print("-- Catalog --")
-        #print( formatted )
+
+        try:
+            snapshot = self._smart_data.catalog_snapshot(input_tables)
+        except KeyError as exc:
+            return (
+                "Status: table_unavailable\n"
+                f"{exc}\n"
+                "The requested table is not registered. "
+                "Do not request it again. Use the available catalog only. "
+                "If required data is unavailable, explain that the requested "
+                "assessment cannot be completed."
+            )
+
+        return self._format_catalog_snapshot(snapshot)
+
+
+
         return formatted
+    
 
     def sql_materialize( self, sql:str, materialized_table_name:str, detailed_table_description:str ):
         """
@@ -1103,10 +1113,29 @@ class ResultsAnalyst:
             StructuredTool.from_function(self.plot),
         ]
 
+    # old 
+    #def update_data(self, tables:Any):
+    #
+    #    self._smart_data.clear()#update_data( tables )
+    #    metadata =  {t.name:t for t in self.config.semantic_catalog.tables}
+    #    self._smart_data.set_data( tables, metadata)
 
-    def update_data(self, tables:Any):
+
+    def update_data(self, tables: dict[str,pd.DataFrame]):
+        """
+        Updates the data and the metadata. 
+        For the metadata, it only adds the entries from the known tables that match a table name in the data dictionary.
+        For instance, a known table "distances" will not be added as metadata if tables[str,pd.Dataframe] doest contain "distances"
+        """
         self._smart_data.clear()#update_data( tables )
-        metadata =  {t.name:t for t in self.config.semantic_catalog.tables}
+        table_names = tables.keys()
+        metadata =  {t.name:t for t in self.config.semantic_catalog.tables if t.name in table_names}
+
+        missing_tables = set(table_names) - set(metadata)
+        if missing_tables:
+            print(f"Tables not found in metadata: {', '.join(sorted(missing_tables))}")
+            print("This will raise an exception")
+                
         self._smart_data.set_data( tables, metadata)
 
 
@@ -1129,7 +1158,7 @@ class ResultsAnalyst:
         return self.data_tools._format_catalog_snapshot(snapshot)
 
 
-    def catalog_snapshot(self, input_tables: None | str | Iterable[str] = None) -> str:
+    def catalog_snapshot(self, input_tables: None | str | list[str] = None) -> str:
         """Return an LLM-friendly textual snapshot of the data catalog."""
         return self.data_tools.catalog_snapshot(input_tables)
 
@@ -1266,7 +1295,7 @@ class ResultsAnalyst:
         semantic_context = self.config.semantic_context#_smart_data.metadata['semantic_context'] # type: ignore
 
 
-        return template.format( # type: ignore
+        ret =  template.format( # type: ignore
             semantic_constraints=format_list(
                 semantic_catalog.semantic_constraints
             ),
@@ -1285,6 +1314,11 @@ class ResultsAnalyst:
 
 
         )
+
+        #print( ret )
+
+        return ret 
+    
 
 
     def _delete_old_derived_tables( self ):
@@ -1309,6 +1343,12 @@ class ResultsAnalyst:
     def _build_agent(self, context: TaskExecutionContext | None = None):
 
         prompt = self._build_system_prompt()
+
+
+        #print("=== FINAL SYSTEM PROMPT ===")
+        #print(prompt)
+
+
         textual_context = self.build_textual_context_from_previous_tasks(context)
         if textual_context:
             prompt += (
@@ -1456,6 +1496,10 @@ if __name__ == "__main__":
     raw_data, metadata, semantic_catalog, semantic_context = prepare_test_data()
     x.update_data( raw_data )
 
+    snapshot  = x.catalog_snapshot()
+
+    print( snapshot )
+
 
     query=(
 
@@ -1486,13 +1530,17 @@ if __name__ == "__main__":
             #"Summarize simulation results. Focus in anomalous values"
             #--no rates--"plot the liquid rate over time (monthly aggragated) of the 2 best performing producers and also the worst of all"    
             #"generate a TAU vs GAIN plot. Interpret it. "
-            "Make a summary of the quality of the simulations and show the percent of the total production of all the wells combined that is due to injectionm, pressure and primary depletion"
+            #"Make a summary of the quality of the simulations and show the percent of the total production of all the wells combined that is due to injectionm, pressure and primary depletion"
             #"Determine how many injectors -on average- support a producer with a non-negligible gain?. For the best supported producer show a pie chart of its produced volume fractions (oil, gas,water) and compare those volumes to those of the worst performing producer"
             #"Rank the injectors according to the attributable oil produced due to their injection. Plot in a bar chart the oil  produced currently by each producer"
             #"Is there any evidence of channelling?"
+            #"Do we have simulation data?"
+            "Can you assess model the quality of the model results?"
         )
+    
+    #import pprint 
+    #pprint.pprint( x.catalog_snapshot()) 
+
 
     task_result = x.run( query )
-
-
     print_task_result( task_result )

@@ -2066,7 +2066,8 @@ def test1():
     #print( raw_data.keys() )
     
     query=(
-        "which are the top 5 best supported producers?"
+        "Do we have simulation data?"
+        #"which are the top 5 best supported producers?"
         #"""interpert the connectivity but ignore from the data negligible gains. Then plot GAIN vs distance for non-negligible gains"""
         #"filter out negligible gains and interpret the connectivities observed. Plot GAIN vs Tau for those "
         #"Show GAIN versus TAU for non-negligible connections. "

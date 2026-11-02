@@ -1,9 +1,8 @@
-I have identified the top 5 best-supported producers based on the highest total_allocation and number of supporting injectors. Here are the results:
+Yes, we have simulation data available. The following tables are present and contain the required information:
 
-1. **Producer P1**: Total allocation of 0.85, supported by 4 injectors.
-2. **Producer P2**: Total allocation of 0.80, supported by 3 injectors.
-3. **Producer P3**: Total allocation of 0.78, supported by 5 injectors.
-4. **Producer P4**: Total allocation of 0.75, supported by 2 injectors.
-5. **Producer P5**: Total allocation of 0.70, supported by 3 injectors.
+1. **connectivity_table**: Contains injector-producer connectivity results, including injector allocation and producer allocation metrics.
+2. **simulation_quality_table**: Provides producer-level history-match quality metrics.
+3. **producer_model_table**: Includes producer-level production state and modeled production-support decomposition.
+4. **injector_model_table**: Contains injector-level injection snapshots, connectivity summaries, and modeled attributable production.
 
-These producers are the best-supported in terms of injection contributions and the number of injectors providing meaningful support. Let me know if you need further analysis or details!
+Let me know how you'd like to proceed or what specific analysis you need!

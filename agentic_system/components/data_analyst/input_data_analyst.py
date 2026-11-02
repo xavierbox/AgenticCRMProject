@@ -184,7 +184,7 @@ class InputDataAnalyst:
     def update_data(self, tables: dict[str,pd.DataFrame]):
         """
         Updates the data and the metadata. 
-        For the metadata, it only add the entries from the known tables that match a table name in the data dictionary.
+        For the metadata, it only adds the entries from the known tables that match a table name in the data dictionary.
         For instance, a known table "distances" will not be added as metadata if tables[str,pd.Dataframe] doest contain "distances"
         """
         self._smart_data.clear()#update_data( tables )
@@ -532,7 +532,7 @@ if __name__ == "__main__":
 
     inj, prod,locs, distances =get_default_data()
     analyst = InputDataAnalyst( llm = get_llm(), config = InputDataAnalystConfig() )
-    analyst.update_data( {'injectors':inj,'producers':prod, 'locations':locs, 'distances':distances } )
+    analyst.update_data( {'injectors':inj,'producers':prod }) #, 'locations':locs, 'distances':distances } )
     
     print( analyst.catalog_textual_snapshot())
     
@@ -546,9 +546,15 @@ if __name__ == "__main__":
     #query  = "List wells with high watercut ( above 0.01 )"
     #print(response)
     
-    response = analyst.run("Whats the mean distance between a producer and its first and third closest injector per subzone and sector? ")   
+    #response = analyst.run("Whats the mean distance between a producer and its first, second and third closest injector per subzone and sector? ")   
     #query  = "show the well count per subzone and well type. Also, show the total liquid production per year in another table. Can you define VRR>?"
     #query  = "List wells with high watercut ( above 0.01 )"
+    
+    query = "Do we have input data?"
+    query = "Whats the mean distance between producers and their closest injector?"
+        
+    response = analyst.run( query )   
+      
     print(response)
     
 

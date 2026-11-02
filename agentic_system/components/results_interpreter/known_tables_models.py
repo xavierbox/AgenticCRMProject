@@ -315,7 +315,7 @@ interpreter_semantic_catalog = {
         {
             "name": "connectivity_table",
             "description": (
-                "CRM injector-producer connectivity results. "
+                "Simulation-derived injector-producer connectivity results. "
                 "Each row represents one modeled injector-producer pair."
             ),
             "kind": "base",
@@ -338,6 +338,7 @@ interpreter_semantic_catalog = {
                         "liquid production at producer j. Denoted G_ij. "
                         "Controls the modeled strength of support from the "
                         "injector to the producer."
+                        "This is referred as the -injector allocation- in the technical jargon"
                     ),
                 },
                 {
@@ -414,7 +415,7 @@ interpreter_semantic_catalog = {
         {
             "name": "simulation_quality_table",
             "description": (
-                "Producer-level CRM history-match quality metrics. "
+                "Producer-level history-match quality metrics. "
                 "Each row represents one producer model."
             ),
             "kind": "base",
@@ -444,7 +445,7 @@ interpreter_semantic_catalog = {
                     "name": "QUALITY_SCORE",
                     "data_type": "float",
                     "description": (
-                        "Composite CRM history-match quality metric from "
+                        "Composite history-match quality metric from "
                         "0 to 1. Higher values indicate better model quality."
                     ),
                 },
@@ -559,7 +560,7 @@ interpreter_semantic_catalog = {
                     "name": "pressure_coefficient",
                     "data_type": "float",
                     "description": (
-                        "CRM-P productivity coefficient: derivative of liquid "
+                        "Simulation-derived productivity coefficient: derivative of liquid "
                         "production with respect to bottom-hole pressure, "
                         "according to the model's pressure convention."
                     ),
@@ -583,7 +584,7 @@ interpreter_semantic_catalog = {
                 {
                     'name': 'primary_depletion_coefficient',
                     'data_type': 'float',
-                    'description': 'Producer-level primary-depletion coefficient, copied from model parameter LO. Interpret according to the CRM model equations.',
+                    'description': 'Producer-level primary-depletion coefficient, copied from model parameter LO. Interpret according to the model equations.',
                 },
                 {
                     'name': 'PRODUCER_SECTOR',
@@ -708,6 +709,7 @@ interpreter_semantic_catalog = {
         (
             "GAIN and PRODUCER ALLOCATION have different physical meanings and "
             "must not be used interchangeably."
+            "The term GAIN is generally replaced by -injector allocation- in results, summaries and technical jargon"
         ),
         "GAIN is injector-centric.",
         "PRODUCER_ALLOCATION is producer-centric.",
@@ -747,10 +749,15 @@ interpreter_semantic_context = {
         (
             "Injector utility is related to the sum of GAIN across the "
             "producers supported by that injector."
+            "The term -total injector allocation- if preferred over -utility-" 
         ),
         (
             "injector efficiency is the ratio of the total attributable oil produced "
             "as result of the injection to the total water injected"
+        ),
+        (
+            "The term GAIN is must replaced by -injector allocation- in all the answers"
+
         ),
          (" producer efficiency is the ratio of the total oil produced at a given producer p to its total liquid production"
          )
@@ -800,14 +807,7 @@ interpreter_semantic_context = {
             "determine the intended criterion from the question; do not assume these "
             "terms always refer to the same metric. Request clarification when needed."
         ),
-        (
-            "Select evidence across tables as needed: connectivity_table describes "
-            "injector-producer connections, producer_model_table describes production "
-            "drivers and response parameters, and simulation_quality_table describes "
-            "history-match quality. For current oil attribution to an injector, combine "
-            "PRODUCER_ALLOCATION with producer current liquid production and oil fraction. "
-            "For reliable strong connections, combine connectivity with producer quality."
-        ),
+
         (
             "Do not simply repeat table values. Identify patterns, extremes, "
             "rankings, anomalies and combinations of metrics that provide "
@@ -888,11 +888,20 @@ interpreter_semantic_context = {
             "available in the data."
         ),
         (
-            "Always consider simulation quality when interpreting CRM "
+            "Always consider simulation quality when interpreting simulation "
             "parameters. Strong connectivity or unusual parameter values "
             "associated with poorly matched producers should be reported "
             "with reduced confidence."
         ),
+                (
+            "Select evidence across tables as needed: connectivity_table describes "
+            "injector-producer connections, producer_model_table describes production "
+            "drivers and response parameters, and simulation_quality_table describes "
+            "history-match quality. For current oil attribution to an injector, combine "
+            "PRODUCER_ALLOCATION with producer current liquid production and oil fraction. "
+            "For reliable strong connections, combine connectivity with producer quality."
+        ),
+
         (
             "For broad summary requests, synthesize findings across tables "
             "rather than summarizing each table independently."

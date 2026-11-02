@@ -816,19 +816,94 @@ class SmartData(BaseDataComponent):
 
         return smart_data
 
-    def catalog_snapshot(self, input_tables: None | str | Iterable[str] = None) -> CatalogTablesSnapshot:
+
+
+    def catalog_snapshot(
+        self,
+        input_tables: None | str | list[str] = None,
+    ) -> CatalogTablesSnapshot:
         """
-        Returns schema and description of all tables (base and derived) in the database
+        Returns schema and description of all tables (base and derived)
+        in the database.
         """
+
+        # Materialize iterators so their actual values appear in the logs.
+        if input_tables is not None and not isinstance(input_tables, str):
+            if isinstance(input_tables, Iterable):
+                input_tables = list(input_tables)
+            else:
+                raise TypeError(
+                    f"{type(input_tables).__name__} is not supported"
+                )
+
+        print(
+            f"[catalog_snapshot] Requested tables: {input_tables!r}",
+            flush=True,
+        )
+        print(
+            f"[catalog_snapshot] Available tables: "
+            f"{list(self._catalog.tables)!r}",
+            flush=True,
+        )
+
         if input_tables is None:
             return self._catalog.snapshot()
+
+        requested_names = (
+            [input_tables]
+            if isinstance(input_tables, str)
+            else input_tables
+        )
+
+        missing_names = [
+            name
+            for name in requested_names
+            if name not in self._catalog.tables
+        ]
+
+        if missing_names:
+            raise KeyError(
+                f"Requested tables are not in the catalog: {missing_names}. "
+                f"Available tables: {list(self._catalog.tables)}"
+            )
+
         if isinstance(input_tables, str):
             card = self._catalog.tables[input_tables]
             return self._catalog.snapshot(card)
-        if isinstance(input_tables, Iterable):
+
+        cards = [
+            self._catalog.tables[name]
+            for name in requested_names
+        ]
+        return self._catalog.snapshot(cards)
+
+
+    def old_catalog_snapshot(self, input_tables: None | str | list[str] = None) -> CatalogTablesSnapshot:
+        """
+        Returns schema and description of all tables (base and derived) in the database
+        """
+
+        print("[catalog_snapshot]", input_tables )
+
+        ret = None 
+        if input_tables is None:
+            ret = self._catalog.snapshot()
+        elif isinstance(input_tables, str):
+            card = self._catalog.tables[input_tables]
+            ret = self._catalog.snapshot(card)
+        elif isinstance(input_tables, Iterable):
             cards = [self._catalog.tables[name] for name in input_tables]
-            return self._catalog.snapshot(cards)
-        raise TypeError(f"{type(input_tables).__name__} is not supported")
+            ret = self._catalog.snapshot(cards)
+        
+        if not ret:     
+            raise TypeError(f"{type(input_tables).__name__} is not supported")
+
+        #print( ret )
+
+
+        return ret 
+    
+
 
     
     def catalog_textual_snapshot(self, input_tables=None) -> dict:
