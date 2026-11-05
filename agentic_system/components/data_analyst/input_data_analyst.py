@@ -532,7 +532,7 @@ if __name__ == "__main__":
 
     inj, prod,locs, distances =get_default_data()
     analyst = InputDataAnalyst( llm = get_llm(), config = InputDataAnalystConfig() )
-    analyst.update_data( {'injectors':inj,'producers':prod }) #, 'locations':locs, 'distances':distances } )
+    analyst.update_data( {'injectors':inj,'producers':prod , 'locations':locs, 'distances':distances } )
     
     print( analyst.catalog_textual_snapshot())
     
@@ -551,8 +551,9 @@ if __name__ == "__main__":
     #query  = "List wells with high watercut ( above 0.01 )"
     
     query = "Do we have input data?"
-    query = "Whats the mean distance between producers and their closest injector?"
-        
+    query = "Whats the mean distance between producers and their first, second, third and fourth closest injectors?"
+    query = "Do we have input data? which tables are available?"
+
     response = analyst.run( query )   
       
     print(response)

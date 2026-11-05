@@ -248,7 +248,6 @@ inj_prod_locs_semantic_catalog = {
                 }
             ]
         },
-
         {
     "name": "distances",
     "description": "Distances between injector and producer wells. Each row represents one injector–producer pair.",

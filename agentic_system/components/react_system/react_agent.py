@@ -27,7 +27,7 @@ from agentic_system.components.direct_answer.direct_answer import get_default_di
 from agentic_system.components.data_analyst.input_data_analyst import *
 from agentic_system.components.results_interpreter.results_analyst import (
     ResultsAnalyst,
-    get_default_results_analyst,
+    get_default_crm_results_analyst,get_default_aaf_results_analyst,
     prepare_test_data,
 )
 from agentic_system.components.presenter.presenter import * 
@@ -93,9 +93,6 @@ def get_planner_as_structured_tool(initialized_component) -> StructuredTool:
     return tool 
 
 
-
-
-
 class ReactSystem:
 
     def __init__( self, llm, prompt = None ):
@@ -108,35 +105,75 @@ class ReactSystem:
         self.response = None 
         self.prompt = prompt if not prompt is None else react_prompt_template
         self.planner_component = get_default_planner( llm )
-        self.direct_answer = get_default_direct_answer( llm )
-        self.results_analyst = get_default_results_analyst(self.llm)
+        self.direct_answer     = get_default_direct_answer( llm )
+        self.crm_results_analyst   = get_default_crm_results_analyst(self.llm)
+        self.aaf_results_analyst   = get_default_aaf_results_analyst(self.llm)
+
+
+
+        self.results_analyst_name = "CRM"
        
+        self.results_analyst = self.crm_results_analyst
 
         self.analyst = get_default_analyst( llm )
        
         self.presenter = PresenterComponent4( llm=llm)
       
-        self.components =[
+        self.all_components =[
             self.planner_component,
             self.direct_answer,
-            self.results_analyst,
+            self.crm_results_analyst,
+            self.aaf_results_analyst,
+                        
             self.analyst,
             self.presenter
         ]
         
+        #self.active_components =[
+        #    self.planner_component,
+        #    self.direct_answer,
+        #    self.results_analyst,                        
+        #    self.analyst,
+        #    self.presenter
+        #]
+
         self.long_tasks_memory: dict[str, TaskResult] = {}
 
         self.turn_tasks_memory: dict[str, TaskResult] = {}
 
-        for component in self.components:
+        for component in self.all_components:
             component.artifact_storage = self.turn_tasks_memory
  
-        self.tools = [component.as_tool() for component in self.components if component !=  self.presenter ] 
+        self.tools = None#[component.as_tool() for component in self.components if component !=  self.presenter ] 
        
-        self.agent = create_agent(model = llm, 
-                            system_prompt = react_prompt_template, 
-                            tools=self.tools )
+        self.agent = None#create_agent(model = llm, 
+                         #   system_prompt = react_prompt_template, 
+                         #   tools=self.tools )
         
+
+
+    def _build_agent(self):
+        """Build the outer agent with the currently active interpreter."""
+
+        active_components = [
+            self.planner_component,
+            self.direct_answer,
+            self.results_analyst,
+            self.analyst,
+        ]
+
+        self.tools = [
+            component.as_tool()
+            for component in active_components
+        ]
+
+        self.agent = create_agent(
+            model=self.llm,
+            system_prompt=self.prompt,
+            tools=self.tools,
+        )
+
+        return self.agent  
 
     def run( self, query: str, previous_state: ExecutorState | None = None, run_presenter = True  ):
 
@@ -286,11 +323,57 @@ class ReactSystem:
     def set_analyst_data(self, data):
         self.analyst.update_data( data ) 
 
-    def set_interpreter_data(self, data):
+    def old_set_interpreter_data(self, data):
         self.results_analyst.update_data( data )
 
-    def set_results_analyst_data(self, data):
-        self.results_analyst.update_data(data)
+    def old_set_results_analyst_data(self, data):
+        return self.old_set_interpreter_data(data)
+
+
+    def set_results_analyst_data(
+        self,
+        data,
+        simulation_type: str = "CRM",
+    ):
+        """Dispatch data loading to the appropriate interpreter."""
+
+        simulation_type = simulation_type.strip().upper()
+        self.results_analyst_name = simulation_type 
+
+        if simulation_type == "CRM":
+            print("Setting a CRM intertpreter")
+            return self.set_crm_interpreter_data(data)
+
+        if simulation_type == "AAF":
+            print("Setting a AAF intertpreter")
+            return self.set_aaf_interpreter_data(data)
+
+        raise ValueError(
+            f"Unsupported simulation type: {simulation_type}"
+        )
+
+    def set_crm_interpreter_data(self, data):
+        """Load CRM data and activate the CRM interpreter."""
+
+        self.crm_results_analyst.update_data(data)
+
+        if self.results_analyst is not self.crm_results_analyst:
+            self.agent = None
+
+        self.results_analyst = self.crm_results_analyst
+        self.results_analyst_name = "CRM"
+
+    def set_aaf_interpreter_data(self, data):
+        """Load AAF data and activate the AAF interpreter."""
+
+        self.aaf_results_analyst.update_data(data)
+
+        if self.results_analyst is not self.aaf_results_analyst:
+            self.agent = None
+
+        self.results_analyst = self.aaf_results_analyst
+        self.results_analyst_name = "AAF"
+
 
     def clear( self ):
         self.turn_tasks_memory.clear()
@@ -307,7 +390,11 @@ class ReactSystem:
     def _get_response( self, query:str):
 
         started = perf_counter()
-        agent = self.agent
+        # Build on first use, or after a simulation-type change.
+        if self.agent is None:
+            self._build_agent()
+
+        agent = self.agent 
 
         response = agent.invoke(
                     {
@@ -366,9 +453,9 @@ if __name__ == "__main__":
     agent = ReactSystem( llm )
 
     data, _, _, _ = prepare_test_data()
-    agent.set_results_analyst_data(data)
+    agent.set_results_analyst_data(data, "CRM")
 
-    inj, prod,locs =get_default_data()
+    inj, prod,locs,distances =get_default_data()
     agent.set_analyst_data( {'injectors':inj,'producers':prod, 'locations':locs } )
 
     #query = "Whats VRR? and which is the most supported producer and which one is producing the most due to primary depletion?"
@@ -385,6 +472,9 @@ if __name__ == "__main__":
     #the percent of the total production of all the wells combined that is due to injectionm, pressure and primary depletion"""
 
     query="""from the simulation results show in a pie chart the percent of the total production of all the wells combined that is due to injection, pressure and primary depletion"""
+
+    query="""from the input data identify the producers (10 of them) with the lowest oil to water production ratio. Show the names and volumes produced for each"""
+
 
     #query="""Can you show in a bar chart the percent of production volumes currently (oil, gas and water)
     #from the data in the simulation results? 
@@ -423,7 +513,8 @@ if __name__ == "__main__":
 
     # 1) Run deterministic executor without presenter 
     
-    
+    query = "Do we have simulation results?"
+    query = "Show in a table the 12 wells with the highest watercut at present"
     response = agent.run_with_deterministic_executor(query, run_presenter=False)
     execution_state = agent.execution_state
 

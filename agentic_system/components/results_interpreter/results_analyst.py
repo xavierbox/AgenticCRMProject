@@ -35,9 +35,13 @@ from agentic_system.common.semantic_models import (
 )
 from agentic_system.common.utils import print_task_result
 from agentic_system.components.results_interpreter.known_tables_models import (
-    interpreter_semantic_catalog,
-    interpreter_semantic_context,
+    crm_interpreter_semantic_catalog,
+    crm_interpreter_semantic_context,
+    aaf_interpreter_semantic_catalog,
+    aaf_interpreter_semantic_context,
+
 )
+
 from agentic_system.components.results_interpreter.prompts import RESULTS_ANALYST_PROMPT_TEMPLATE
 from agentic_system.components.results_interpreter.semantic_context import ResultsInterpreterSemanticContext
 
@@ -62,14 +66,14 @@ class ResultsAnalystConfig( ):
     
     semantic_catalog: SemanticCatalog = field(
         default_factory=lambda: SemanticCatalog.model_validate(
-            interpreter_semantic_catalog
+            crm_interpreter_semantic_catalog
         )
     )
         
         
     semantic_context: ResultsInterpreterSemanticContext = field(
         default_factory=lambda: ResultsInterpreterSemanticContext.model_validate(
-            interpreter_semantic_context
+            crm_interpreter_semantic_context
         )
     )
 
@@ -883,16 +887,23 @@ class ResultsAnalyst:
 
     agent_name = "results_analyst"
 
-    def __init__(self, llm ):
+    def __init__(self, llm, config: ResultsAnalystConfig | None = None):
         self.llm =  llm; #get_llm()
         self._smart_data = SmartData()
         self.data_tools = ResultsAnalystTools(self._smart_data)
         self.smart_data_tools = self.data_tools.smart_data_tools
-        self.config = ResultsAnalystConfig()
+        #self.config = ResultsAnalystConfig | None = None#ResultsAnalystConfig()
+
+        self.config = (
+            config if config is not None else ResultsAnalystConfig()
+        )
+
         self.agent = None
         self._artifact_storage: dict[str, TaskResult] | None = None
         self.tools = self.get_agent_tools()
         self.task_result = None
+
+
 
     @property
     def artifact_storage(self) -> dict[str, TaskResult] | None:
@@ -1483,22 +1494,48 @@ class ResultsAnalyst:
         return self.task_result
 
 
-def get_default_results_analyst(llm) -> ResultsAnalyst:
+def get_default_crm_results_analyst(llm) -> ResultsAnalyst:
     """Create a results analyst with its default configuration and tools."""
     return ResultsAnalyst(llm=llm)
+
+
+def get_default_aaf_results_analyst(llm) -> ResultsAnalyst:
+    """Create a results analyst with its default configuration and tools."""
+
+    aaf_semantic_catalog = SemanticCatalog.model_validate(aaf_interpreter_semantic_catalog)
+    aaf_semantic_context = ResultsInterpreterSemanticContext.model_validate(aaf_interpreter_semantic_context)   
+    config = ResultsAnalystConfig(
+        semantic_catalog=aaf_semantic_catalog,
+        semantic_context=aaf_semantic_context,
+    )
+ 
+
+    return ResultsAnalyst(llm=llm, config=config)
+
+
 
 
 if __name__ == "__main__":
 
     llm = get_llm()
-    x = get_default_results_analyst( llm )
+    #x = get_default_crm_results_analyst( llm )
+
+    aaf_semantic_catalog = SemanticCatalog.model_validate(aaf_interpreter_semantic_catalog)
+    aaf_semantic_context = ResultsInterpreterSemanticContext.model_validate(aaf_interpreter_semantic_context)   
+    config = ResultsAnalystConfig(
+        semantic_catalog=aaf_semantic_catalog,
+        semantic_context=aaf_semantic_context,
+    )
+  
+
+    x = get_default_aaf_results_analyst( llm )
 
     raw_data, metadata, semantic_catalog, semantic_context = prepare_test_data()
     x.update_data( raw_data )
 
-    snapshot  = x.catalog_snapshot()
+    #snapshot  = x.catalog_snapshot()
 
-    print( snapshot )
+    #print( snapshot )
 
 
     query=(

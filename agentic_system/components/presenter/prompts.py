@@ -153,15 +153,21 @@ For example, pie-chart args: {"labels": "CATEGORY", "values": "VALUE"}.
 
 PLOT TOOLS
 
+plot_table:
+Use when the user requests a table or tabular output.
+Preserve requested columns, ordering, and row limits.
+Do not substitute a chart or textual summary for an explicitly requested table.
 
 Args:
 {
-  "columns": ["<column>", "..."],
+  "columns": null | ["<column>", "..."],
   "sort_by": null | "<column>",
   "sort_order": "asc|desc",
-  "limit": null | <integer>,
+  "limit": null | <positive_integer>,
   "title": "<title>"
 }
+
+ 
 
 
 plot_bar_chart:

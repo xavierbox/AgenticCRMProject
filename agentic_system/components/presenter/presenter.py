@@ -7,6 +7,14 @@ from time import perf_counter
 import warnings as warnings_module
 import json
 import textwrap
+import json
+import math
+#from datetime import date, datetime, time, timedelta
+import datetime as presenter_datetime_module
+
+import numpy as np
+import pandas as pd
+
 
 sys.path.append("./")  # Add the parent directory to the Python path
 sys.path.append("../")  # Add the parent directory to the Python path
@@ -43,6 +51,70 @@ from agentic_system.components.presenter.prompts import *
 from pydantic import BaseModel, Field, TypeAdapter
 
 adapter = TypeAdapter(list[TaskResult])
+
+def normalize_output_value(value):
+    """Recursively convert presenter payloads into JSON-safe values."""
+
+    if value is None or value is pd.NA or value is pd.NaT:
+        return None
+
+    if isinstance(value, np.datetime64):
+        return None if np.isnat(value) else pd.Timestamp(value).isoformat()
+
+    if isinstance(value, np.timedelta64):
+        return None if np.isnat(value) else pd.Timedelta(value).isoformat()
+
+    if isinstance(
+        value,
+        (
+            pd.Timestamp,
+            presenter_datetime_module.datetime,
+            presenter_datetime_module.date,
+            presenter_datetime_module.time,
+        ),
+    ):
+        return value.isoformat()
+
+    if isinstance(
+        value,
+        (pd.Timedelta, presenter_datetime_module.timedelta),
+    ):
+        return pd.Timedelta(value).isoformat()
+
+    if isinstance(value, (str, bool, int)):
+        return value
+
+    if isinstance(value, float):
+        return value if math.isfinite(value) else None
+
+    if isinstance(value, np.bool_):
+        return bool(value)
+
+    if isinstance(value, np.integer):
+        return int(value)
+
+    if isinstance(value, np.floating):
+        number = float(value)
+        return number if math.isfinite(number) else None
+
+    if isinstance(value, dict):
+        return {
+            str(key): normalize_output_value(item)
+            for key, item in value.items()
+        }
+
+    if isinstance(value, (list, tuple)):
+        return [normalize_output_value(item) for item in value]
+
+    if isinstance(value, np.ndarray):
+        return normalize_output_value(value.tolist())
+
+    if isinstance(value, (pd.Series, pd.Index)):
+        return normalize_output_value(value.tolist())
+
+    raise TypeError(
+        f"Unsupported presenter output type: {type(value).__name__}"
+    )
 
 
 #########################################################
@@ -101,8 +173,11 @@ class ScatterArgs(StrictModel):
 
 
 class TableArgs(StrictModel):
+    columns: list[StrictStr] | StrictStr | None = None
+    sort_by: StrictStr | None = None
+    sort_order: Literal["asc", "desc"] = "desc"
+    limit: int | None = Field(default=None, gt=0)
     title: StrictStr | None = None
-
 
 class ListArgs(StrictModel):
     columns: list[StrictStr] | StrictStr | None = None
@@ -178,7 +253,17 @@ class ChartPlan(StrictModel):
  
 class UIItem(BaseModel):
     id: str
-    type: Literal["table", "chart", "text", "markdown", "error", "question"]
+    #type: Literal["table", "chart", "text", "markdown", "error", "question"]
+    type: Literal[
+        "table",
+        "table-records",
+        "chart",
+        "text",
+        "markdown",
+        "error",
+        "question",
+    ]
+
     title: str | None = None
     data: dict[str, Any]
     meta: dict[str, Any] = Field(default_factory=dict)
@@ -199,6 +284,227 @@ class PresenterChartingTools:
                 "responsive": True,
                 "displaylogo": False,
             }
+
+
+    def _prepare_axis(
+        self,
+        df: pd.DataFrame,
+        column: str,
+        axis_type: str = "auto",
+        date_format: str | None = None,
+        order: str = "preserve",
+        category_order: list | None = None,
+    ) -> tuple[pd.DataFrame, dict]:
+        """Prepare axis values, optional ordering, and Plotly settings.
+
+        Call on each trace's dataframe when ordering is required.
+
+        axis_type: auto | date | numeric | category
+        order: preserve | ascending | descending
+
+        Automatic date detection recognizes only:
+        - existing datetime columns;
+        - YYYY-M or YYYY-MM strings;
+        - YYYY-MM-DD strings.
+
+        Other date formats require an explicit date_format.
+        """
+
+        if axis_type not in {"auto", "date", "numeric", "category"}:
+            raise ValueError(f"Unsupported axis_type: {axis_type}")
+
+        if order not in {"preserve", "ascending", "descending"}:
+            raise ValueError(f"Unsupported axis order: {order}")
+
+        self._validate_columns(df, [column])
+
+        work = df.copy()
+        source = work[column]
+        non_missing = source.dropna()
+
+        resolved_type = axis_type
+        resolved_format = date_format
+        is_datetime = pd.api.types.is_datetime64_any_dtype(source)
+
+        # Infer conservatively; never parse numeric values as dates.
+        if resolved_type == "auto":
+            if date_format is not None or is_datetime:
+                resolved_type = "date"
+
+            elif pd.api.types.is_bool_dtype(source):
+                resolved_type = "category"
+
+            elif pd.api.types.is_numeric_dtype(source):
+                resolved_type = "numeric"
+
+            elif (
+                not non_missing.empty
+                and non_missing.map(
+                    lambda value: isinstance(value, str)
+                ).all()
+            ):
+                labels = non_missing.str.strip()
+
+                if labels.str.fullmatch(
+                    r"\d{4}-(?:0?[1-9]|1[0-2])"
+                ).all():
+                    resolved_type = "date"
+                    resolved_format = "%Y-%m"
+
+                elif labels.str.fullmatch(
+                    r"\d{4}-\d{2}-\d{2}"
+                ).all():
+                    resolved_type = "date"
+                    resolved_format = "%Y-%m-%d"
+
+                else:
+                    resolved_type = "category"
+
+            else:
+                resolved_type = "category"
+
+        if resolved_type == "date":
+            if not is_datetime and resolved_format is None:
+                # Explicit date axes still require an unambiguous format.
+                if (
+                    not non_missing.empty
+                    and non_missing.map(
+                        lambda value: isinstance(value, str)
+                    ).all()
+                ):
+                    labels = non_missing.str.strip()
+
+                    if labels.str.fullmatch(
+                        r"\d{4}-(?:0?[1-9]|1[0-2])"
+                    ).all():
+                        resolved_format = "%Y-%m"
+
+                    elif labels.str.fullmatch(
+                        r"\d{4}-\d{2}-\d{2}"
+                    ).all():
+                        resolved_format = "%Y-%m-%d"
+
+                if not non_missing.empty and resolved_format is None:
+                    raise ValueError(
+                        f"Date axis '{column}' requires date_format "
+                        "or a datetime-typed column."
+                    )
+
+            values = source
+
+            if resolved_format is not None:
+                # Strip whitespace while preserving missing values.
+                values = source.map(
+                    lambda value: value.strip()
+                    if isinstance(value, str)
+                    else value
+                )
+
+            parsed = pd.to_datetime(
+                values,
+                format=resolved_format,
+                errors="coerce",
+            )
+
+            invalid = source.notna() & parsed.isna()
+
+            if invalid.any():
+                examples = source.loc[invalid].head(3).tolist()
+                raise ValueError(
+                    f"Invalid dates in '{column}': {examples}"
+                )
+
+            work[column] = parsed
+            axis_settings = {"type": "date"}
+
+        elif resolved_type == "numeric":
+            parsed = pd.to_numeric(source, errors="coerce")
+
+            invalid = source.notna() & parsed.isna()
+
+            if invalid.any():
+                examples = source.loc[invalid].head(3).tolist()
+                raise ValueError(
+                    f"Invalid numeric values in '{column}': {examples}"
+                )
+
+            work[column] = parsed
+            axis_settings = {"type": "linear"}
+
+        else:
+            # Explicit category axes must not be interpreted as dates.
+            work[column] = source.map(
+                lambda value: None if pd.isna(value) else str(value)
+            )
+
+            axis_settings = {
+                "type": "category",
+                "categoryorder": "array",
+            }
+
+        if category_order is not None:
+            if resolved_type != "category":
+                raise ValueError(
+                    "category_order is only valid for a categorical axis."
+                )
+
+            if order != "preserve":
+                raise ValueError(
+                    "Use either category_order or ascending/descending, "
+                    "not both."
+                )
+
+            requested = list(dict.fromkeys(
+                str(value) for value in category_order
+            ))
+
+            present = list(dict.fromkeys(
+                work[column].dropna().tolist()
+            ))
+
+            # Keep categories omitted from the explicit order.
+            categories = requested + [
+                value for value in present
+                if value not in requested
+            ]
+
+            rank = {
+                value: index
+                for index, value in enumerate(categories)
+            }
+
+            # Sort complete rows without adding a temporary column.
+            positions = (
+                work[column]
+                .map(rank)
+                .reset_index(drop=True)
+                .sort_values(kind="stable", na_position="last")
+                .index
+            )
+
+            work = work.iloc[positions].copy()
+            axis_settings["categoryarray"] = categories
+
+        else:
+            if order != "preserve":
+                work = work.sort_values(
+                    column,
+                    ascending=(order == "ascending"),
+                    kind="stable",
+                    na_position="last",
+                )
+
+            if resolved_type == "category":
+                axis_settings["categoryarray"] = list(dict.fromkeys(
+                    work[column].dropna().tolist()
+                ))
+
+        return work, axis_settings
+
+
+
+
+
 
 
 
@@ -453,6 +759,64 @@ class PresenterChartingTools:
     #       plot             # 
     ##########################
 
+
+    def get_table_records(
+        self,
+        df: pd.DataFrame,
+        *,
+        columns: str | list[str] | None = None,
+        sort_by: str | None = None,
+        sort_order: str = "desc",
+        limit: int | None = None,
+        title: str | None = None,
+    ) -> dict:
+        """Select, sort, and limit a table for frontend rendering."""
+
+        work = df.copy()
+
+        if sort_order not in {"asc", "desc"}:
+            raise ValueError("sort_order must be 'asc' or 'desc'.")
+
+        # Sort before selecting columns, allowing a hidden sort column.
+        if sort_by:
+            self._validate_columns(work, [sort_by])
+            work = work.sort_values(
+                sort_by,
+                ascending=(sort_order == "asc"),
+                kind="stable",
+            )
+
+        if columns is not None:
+            selected_columns = self._as_list(columns)
+            self._validate_columns(work, selected_columns)
+            work = work[selected_columns]
+
+        if limit is not None:
+            if isinstance(limit, bool) or not isinstance(limit, int) or limit <= 0:
+                raise ValueError("limit must be a positive integer.")
+
+            work = work.head(limit)
+
+        return {
+            "title": self.format_label(title) or "Table",
+            "columns": [
+                {
+                    "key": str(column),
+                    "label": self.format_label(column),
+                }
+                for column in work.columns
+            ],
+            # Preserve numbers; serialize dates and missing values safely.
+            "records": json.loads(
+                work.to_json(
+                    orient="records",
+                    date_format="iso",
+                )
+            ),
+        }
+    
+
+
     def run_plot_tool(
         self,
         tool_name: str,
@@ -465,6 +829,7 @@ class PresenterChartingTools:
             "plot_pie_chart": self.plot_pie_chart,
             "plot_scatter_chart": self.plot_scatter_chart,
             "plot_table": self.plot_table,
+            "get_table_records": self.get_table_records,
             "plot_list": self.plot_list,
         }
 
@@ -568,8 +933,20 @@ class PresenterChartingTools:
                 "title",
             },
             "plot_table": {
+                "columns",
+                "sort_by",
+                "sort_order",
+                "limit",
                 "title",
             },
+            "get_table_records": {
+                "columns",
+                "sort_by",
+                "sort_order",
+                "limit",
+                "title",
+            },
+
             "plot_list": {
                 "columns",
                 "sort_by",
@@ -645,7 +1022,7 @@ class PresenterChartingTools:
 
         return out, bucket_col
 
-    def plot_bar_chart(
+    def old_plot_bar_chart(
         self,
         df: pd.DataFrame,
         x: str,
@@ -740,7 +1117,7 @@ class PresenterChartingTools:
             "config": self.plotly_config,
         }
 
-    def plot_line_chart(
+    def _old_plot_line_chart(
         self,
         df: pd.DataFrame,
         x: str,
@@ -818,6 +1195,208 @@ class PresenterChartingTools:
         }
 
 
+    def plot_bar_chart(
+        self,
+        df: pd.DataFrame,
+        x: str,
+        y: str | list[str],
+        *,
+        series_by: str | None = None,
+        orientation: str = "v",
+        barmode: str = "group",
+        title: str | None = None,
+    ) -> dict:
+        y_cols = self._as_list(y)
+
+        required = [x, *y_cols]
+
+        if series_by:
+            required.append(series_by)
+
+        self._validate_columns(df, required)
+
+        if orientation not in {"v", "h"}:
+            raise ValueError("orientation must be 'v' or 'h'")
+
+        if barmode not in {"group", "stack", "relative"}:
+            raise ValueError(
+                "barmode must be 'group', 'stack', or 'relative'"
+            )
+
+        work, axis_settings = self._prepare_axis(
+            df=df,
+            column=x,
+            axis_type="auto",
+            order="preserve",
+        )
+
+        # Sort dates while preserving numeric and categorical rankings.
+        if axis_settings["type"] == "date":
+            work = work.sort_values(
+                x,
+                kind="stable",
+                na_position="last",
+            )
+
+        groups = (
+            work.groupby(series_by, dropna=False)
+            if series_by
+            else [(None, work)]
+        )
+
+        data = []
+
+        for group_value, group in groups:
+            for y_col in y_cols:
+
+                if group_value is None:
+                    trace_name = self.format_label(y_col)
+
+                elif len(y_cols) == 1:
+                    trace_name = str(group_value)
+
+                else:
+                    trace_name = (
+                        f"{group_value} - {self.format_label(y_col)}"
+                    )
+
+                trace = {
+                    "type": "bar",
+                    "name": trace_name,
+                    "orientation": orientation,
+                }
+
+                if orientation == "h":
+                    trace["x"] = group[y_col].tolist()
+                    trace["y"] = group[x].tolist()
+                else:
+                    trace["x"] = group[x].tolist()
+                    trace["y"] = group[y_col].tolist()
+
+                data.append(trace)
+
+        x_label = self.format_label(x)
+        y_label = self.format_label(", ".join(y_cols))
+
+        return {
+            "data": data,
+            "layout": {
+                "title": {
+                    "text": (
+                        self.format_label(title)
+                        or f"{y_label} by {x_label}"
+                    )
+                },
+                "xaxis": {
+                    **(axis_settings if orientation == "v" else {}),
+                    "title": {
+                        "text": y_label if orientation == "h" else x_label,
+                    },
+                },
+                "yaxis": {
+                    **(axis_settings if orientation == "h" else {}),
+                    "title": {
+                        "text": x_label if orientation == "h" else y_label,
+                    },
+                },
+                "barmode": barmode,
+            },
+            "config": self.plotly_config,
+        }
+
+
+    def plot_line_chart(
+        self,
+        df: pd.DataFrame,
+        x: str,
+        y: str | list[str],
+        *,
+        series_by: str | None = None,
+        title: str | None = None,
+    ) -> dict:
+        y_cols = self._as_list(y)
+
+        required = [x, *y_cols]
+
+        if series_by:
+            required.append(series_by)
+
+        self._validate_columns(df, required)
+
+        # Parse recognizable temporal values while preserving categories.
+        work, xaxis_settings = self._prepare_axis(
+            df=df,
+            column=x,
+            axis_type="auto",
+            order="preserve",
+        )
+
+        # Sort complete rows so x and y remain aligned.
+        if xaxis_settings["type"] in {"date", "linear"}:
+            work = work.sort_values(
+                x,
+                kind="stable",
+                na_position="last",
+            )
+
+        groups = (
+            work.groupby(series_by, dropna=False, sort=False)
+            if series_by
+            else [(None, work)]
+        )
+
+        data = []
+
+        for group_value, group in groups:
+            for y_col in y_cols:
+
+                if group_value is None:
+                    trace_name = self.format_label(y_col)
+
+                elif len(y_cols) == 1:
+                    trace_name = str(group_value)
+
+                else:
+                    trace_name = (
+                        f"{group_value} - {self.format_label(y_col)}"
+                    )
+
+                data.append({
+                    "type": "scatter",
+                    "mode": "lines",
+                    "x": group[x].tolist(),
+                    "y": group[y_col].tolist(),
+                    "name": trace_name,
+                })
+
+        return {
+            "data": data,
+            "layout": {
+                "title": {
+                    "text": (
+                        self.format_label(title)
+                        or f"{self.format_label(', '.join(y_cols))} over "
+                        f"{self.format_label(x)}"
+                    )
+                },
+                "xaxis": {
+                    **xaxis_settings,
+                    "title": {
+                        "text": self.format_label(x),
+                    },
+                },
+                "yaxis": {
+                    "title": {
+                        "text": self.format_label(", ".join(y_cols)),
+                    },
+                },
+            },
+            "config": self.plotly_config,
+        }
+
+
+
+
     def plot_pie_chart(
         self,
         df: pd.DataFrame,
@@ -857,6 +1436,144 @@ class PresenterChartingTools:
 
 
     def plot_scatter_chart(
+        self,
+        df: pd.DataFrame,
+        x: str,
+        y: str | list[str],
+        *,
+        series_by: str | None = None,
+        size_by: str | None = None,
+        text_by: str | None = None,
+        title: str | None = None,
+    ) -> dict:
+        y_cols = self._as_list(y)
+
+        required = [x, *y_cols]
+
+        if series_by:
+            required.append(series_by)
+
+        if size_by:
+            required.append(size_by)
+
+        if text_by:
+            required.append(text_by)
+
+        self._validate_columns(df, required)
+
+        # Prepare x while preserving categorical order.
+        work, xaxis_settings = self._prepare_axis(
+            df=df,
+            column=x,
+            axis_type="auto",
+            order="preserve",
+        )
+
+        # Sort complete rows to keep coordinates and marker data aligned.
+        if xaxis_settings["type"] in {"date", "linear"}:
+            work = work.sort_values(
+                x,
+                kind="stable",
+                na_position="last",
+            )
+
+        groups = (
+            work.groupby(series_by, dropna=False)
+            if series_by
+            else [(None, work)]
+        )
+
+        data = []
+
+        for group_value, group in groups:
+            for y_col in y_cols:
+
+                if group_value is None:
+                    trace_name = self.format_label(y_col)
+
+                elif len(y_cols) == 1:
+                    trace_name = str(group_value)
+
+                else:
+                    trace_name = (
+                        f"{group_value} - {self.format_label(y_col)}"
+                    )
+
+                trace = {
+                    "type": "scattergl",
+                    "mode": "markers",
+                    "x": group[x].tolist(),
+                    "y": group[y_col].tolist(),
+                    "name": trace_name,
+                }
+
+                if size_by:
+                    size_values = (
+                        pd.to_numeric(
+                            group[size_by],
+                            errors="coerce",
+                        )
+                        .fillna(0)
+                    )
+
+                    max_size = max(
+                        float(size_values.max()),
+                        1.0,
+                    )
+
+                    trace["marker"] = {
+                        "size": size_values.tolist(),
+                        "sizemode": "area",
+                        "sizeref": max_size / 40,
+                        "sizemin": 4,
+                    }
+
+                if text_by:
+                    trace["text"] = (
+                        group[text_by]
+                        .fillna("")
+                        .astype(str)
+                        .tolist()
+                    )
+
+                    trace["hovertemplate"] = (
+                        f"{self.format_label(x)}: %{{x}}<br>"
+                        f"{self.format_label(y_col)}: %{{y}}<br>"
+                        f"{self.format_label(text_by)}: %{{text}}"
+                        "<extra></extra>"
+                    )
+
+                data.append(trace)
+
+        return {
+            "data": data,
+            "layout": {
+                "title": {
+                    "text": (
+                        self.format_label(title)
+                        or (
+                            f"{self.format_label(', '.join(y_cols))} vs "
+                            f"{self.format_label(x)}"
+                        )
+                    )
+                },
+                "xaxis": {
+                    **xaxis_settings,
+                    "title": {
+                        "text": self.format_label(x),
+                    },
+                },
+                "yaxis": {
+                    "title": {
+                        "text": self.format_label(", ".join(y_cols)),
+                    },
+                },
+            },
+            "config": self.plotly_config,
+        }
+
+
+    def old_plot_scatter_chart(
         self,
         df: pd.DataFrame,
         x: str,
@@ -983,34 +1700,34 @@ class PresenterChartingTools:
         self,
         df: pd.DataFrame,
         *,
+        columns: str | list[str] | None = None,
+        sort_by: str | None = None,
+        sort_order: str = "desc",
+        limit: int | None = None,
         title: str | None = None,
     ) -> dict:
+        table_data = self.get_table_records(
+            df=df,
+            columns=columns,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            limit=limit,
+            title=title,
+        )
+
         header_values = [
-            self.format_label(column)
-            for column in df.columns
+            column["label"]
+            for column in table_data["columns"]
         ]
 
-        cell_values = []
-
-        for column in df.columns:
-            series = df[column]
-
-            if pd.api.types.is_datetime64_any_dtype(series):
-                values = (
-                    series
-                    .dt.strftime("%Y-%m-%d")
-                    .fillna("")
-                    .tolist()
-                )
-            else:
-                values = (
-                    series
-                    .fillna("")
-                    .astype(str)
-                    .tolist()
-                )
-
-            cell_values.append(values)
+        cell_values = [
+            [
+                "" if record.get(column["key"]) is None
+                else str(record[column["key"]])
+                for record in table_data["records"]
+            ]
+            for column in table_data["columns"]
+        ]
 
         return {
             "data": [
@@ -1028,12 +1745,15 @@ class PresenterChartingTools:
             ],
             "layout": {
                 "title": {
-                    "text": self.format_label(title) or "Table"
+                    "text": table_data["title"],
                 },
             },
             "config": self.plotly_config,
         }
 
+        
+    
+    
     def plot_list(
         self,
         df: pd.DataFrame,
@@ -1102,7 +1822,8 @@ class PresenterConfig:
     prompt :str  = presenter_preproces_and_plan_prompt
     split_subinstructions_prompt: str = presenter_split_subinstructions_prompt  
     small_table_prompt: str = small_table_prompt 
-    
+    use_table_records: bool = True
+
     def __init__(
         self,
         charting_tools: PresenterChartingTools | None = None,
@@ -1406,7 +2127,22 @@ class PresenterComponent4:
         return inspect_module.cleandoc(self.__doc__)
 
 
+    def _normalize_response(
+        self,
+        response: PresenterResponse,
+    ) -> PresenterResponse:
+        """Normalize and validate the complete response before delivery."""
 
+        payload = normalize_output_value(
+            response.model_dump(mode="python")
+        )
+
+        # Explicitly reject anything still incompatible with strict JSON.
+        json.dumps(payload, allow_nan=False)
+
+        return PresenterResponse.model_validate(payload)
+
+    
 
     def run(self, result_state: ExecutorState) -> PresenterResponse:
         instruction = result_state.get("user_query", "") if isinstance(result_state, dict) else ""
@@ -1418,7 +2154,10 @@ class PresenterComponent4:
             "=========================",
             flush=True,
         )
+ 
         response = self.process_task_results(result_state)
+        response = self._normalize_response(response)
+
         elapsed = perf_counter() - started
         print(
             "\n====== [RUN END] ======\n"
@@ -1779,6 +2518,24 @@ class PresenterComponent4:
             },
         )
 
+    def _make_table_records_item(
+        self,
+        figure_title: str,
+        table_data: dict,
+        description: str | None = None,
+    ) -> UIItem:
+        """Wrap table records for frontend rendering."""
+
+        return UIItem(
+            id=f"table_{uuid4().hex[:8]}",
+            type="table-records",
+            title=figure_title,
+            data=table_data,
+            meta={
+                "description": description,
+            },
+        )
+
     def _run_chart_plan(
         self,
         plan: dict,
@@ -1820,7 +2577,105 @@ class PresenterComponent4:
 
         return text[:1].upper() + text[1:]
 
+
     def _process_dataframe(
+        self,
+        data_result: DataFrameResult,
+        instruction: str,
+    ) -> UIItem:
+        
+        
+        df = pd.DataFrame(
+            data_result.records,
+            columns=data_result.columns,
+        )
+
+        if df.empty:
+            title = self._format_label(data_result.table_name)
+
+            table_data = self.charting_tools.get_table_records(
+                df=df,
+                title=title,
+            )
+
+            return self._make_table_records_item(
+                title,
+                table_data,
+                data_result.description,
+            )
+
+        nrows, ncols = df.shape
+        
+
+
+        print("Processing dataframe result with shape:", df.shape)
+        print(df)
+
+        if nrows <= -2 and ncols <= 2:
+            print("It is a very small table")
+            return self._present_very_small_table(
+                df,
+                data_result,
+                instruction,
+            )
+
+        processor = TableResponseProcessor()
+
+        table_context = processor.extract_table_context(
+            data_result
+        )
+
+        chart_plan = self._select_chart_plan(
+            instruction,
+            table_context,
+        )
+
+        plot = chart_plan.get("plot") or {}
+        tool_name = plot.get("tool")
+
+        use_records = (
+            tool_name == "plot_table"
+            and self.config.use_table_records
+        )
+
+        if use_records:
+            # Redirect before execution, preserving preprocessing and args.
+            chart_plan = {
+                **chart_plan,
+                "plot": {
+                    **plot,
+                    "tool": "get_table_records",
+                },
+            }
+
+        chart_output = self._run_chart_plan(
+            chart_plan,
+            df,
+        )
+
+        if use_records:
+            return self._make_table_records_item(
+                self._format_label(data_result.table_name),
+                chart_output,
+                data_result.description,
+            )
+
+        # Original Plotly-table path.
+        if tool_name == "plot_table":
+            return self._make_table_item(
+                self._format_label(data_result.table_name),
+                chart_output,
+                data_result.description,
+            )
+
+        return self._make_chart_item(
+            self._format_label(data_result.table_name),
+            chart_output,
+            data_result.description,
+        )
+    
+
+    def _old_process_dataframe(
         self,
         data_result: DataFrameResult,
         instruction: str,
@@ -1848,18 +2703,57 @@ class PresenterComponent4:
             data_result
         )
 
-        chart_plan = self._select_chart_plan(
-            instruction,
-            table_context,
+        chart_plan = self._select_chart_plan(instruction,table_context)
+
+        chart_output = self._run_chart_plan(chart_plan,df)
+
+        plot = chart_plan.get("plot") or {}
+        tool_name = plot.get("tool")
+
+        use_records = (
+            tool_name == "plot_table"
+            and self.config.use_table_records
         )
 
-
+        if use_records:
+            # Preserve preprocessing and all table arguments.
+            # Only redirect the output function.
+            chart_plan = {
+                **chart_plan,
+                "plot": {
+                    **plot,
+                    "tool": "get_table_records",
+                },
+            }
 
         chart_output = self._run_chart_plan(
             chart_plan,
             df,
         )
 
+        if use_records:
+            return self._make_table_records_item(
+                self._format_label(data_result.table_name),
+                chart_output,
+                data_result.description,
+            )
+
+        # Original Plotly-table path.
+        if tool_name == "plot_table":
+            return self._make_table_item(
+                self._format_label(data_result.table_name),
+                chart_output,
+                data_result.description,
+            )
+
+        return self._make_chart_item(
+            self._format_label(data_result.table_name),
+            chart_output,
+            data_result.description,
+        )
+
+    
+        """
         plot = chart_plan.get("plot") or {}
         tool_name = plot.get("tool")
 
@@ -1883,7 +2777,8 @@ class PresenterComponent4:
             chart_output,
             data_result.description,
         )
-
+        """
+    
     def _strip_markdown_json(
         self,
         text: str,

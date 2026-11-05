@@ -1080,8 +1080,12 @@ class SmartDataTools(BaseDomainTools[SmartData]):
         print( ['catalog_snapshot'])
 
         snapshot = self._data_component.catalog_snapshot(input_tables)
+        data_availability_summary = self.get_data_availability()
         #print(snapshot)
-        return self.format_catalog_snapshot( snapshot )
+        part1 = self.format_catalog_snapshot( snapshot )
+        part2 = f"\n\nData vailability summary:\n{data_availability_summary}"
+        return part1 + part2 
+    
 
 
     def _get_table_names( self ):
@@ -1208,6 +1212,60 @@ class SmartDataTools(BaseDomainTools[SmartData]):
 
         return table_name in self._get_table_names()
 
+
+    def get_data_availability(self) -> str:
+        """
+        Call this function to check for data availability and return a report.
+        This tool is useful when the user queries on data availability 
+        """
+
+        try:
+            data = self.data_component
+            snapshot = data.catalog_snapshot()
+
+            tables = (
+                list(snapshot.base_tables or [])
+                + list(snapshot.derived_tables or [])
+            )
+
+            descriptions = []
+
+            for table in tables:
+                quoted_name = '"' + table.name.replace('"', '""') + '"'
+
+                result = data.execute_sql(
+                    f"SELECT 1 FROM {quoted_name} LIMIT 1"
+                )
+
+                if not result.empty:
+                    description = (
+                        table.description or "Information without a description."
+                    ).strip()
+
+                    if description not in descriptions:
+                        descriptions.append(description)
+
+
+                    print(100*'=')
+                    print(description)
+                    print(100*'=')
+                                        
+
+            if not descriptions:
+                return "No data is available."
+
+            to_return = "Available information:\n" + "\n".join(
+                f"- {description}"
+                for description in descriptions
+            )
+
+            #print( to_return )
+            return to_return 
+        
+
+
+        except Exception:
+            return "Data availability could not be checked."
     
 
 class MockDataDrivenStorage:
@@ -1316,7 +1374,7 @@ def get_default_smart_data():
     semantic_catalog = SemanticCatalog.model_validate(inj_prod_locs_semantic_catalog)
 
     tables = semantic_catalog.tables
-    tables_dict = {'injectors':inj, 'producers':prod, 'locations':locs }
+    tables_dict = {'injectors':inj, 'producers':prod, 'locations':locs, 'distances': distances }
     tables_metadata = { t.name: t for t in tables }  
 
     # this should immediately create a smart data object that we can query

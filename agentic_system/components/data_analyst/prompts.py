@@ -50,6 +50,10 @@ In each turn you will provide as result one or more tables
 Do not proceed if the question cannot be answered with the available data. 
 Instead, ask for clarification 
 
+Never expose in your answers the names of the tables available in the catalog.
+Example: Do we have data? Answer: <provide a summary of data availability without listing table names>
+
+
 ===============================================================================
 SQL generation rules 
 ===============================================================================
