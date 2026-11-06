@@ -513,8 +513,31 @@ if __name__ == "__main__":
 
     # 1) Run deterministic executor without presenter 
     
-    query = "Do we have simulation results?"
+    #query = "Do we have simulation results?"
+    query = "plot the current volume fractions produced of water and and oil"
+    #query = "show the current volume fractions produced of water and and oil"   -> text 
+        
+    query="plot monthly aggregated VRR "
+      #query="plot monthly aggregated VRR split by sector and then show in a table the min max and std of the VRR "
+             
+    query="generate a table showing sector index, total water injected in the sector and total number of wells in the sector" \
+    "then plot the number of wells per sector and the total water injected per sector"
+
+    query = "show a table of production statistics per sector such as the total water produced, total oil produced"
+
+    query = "plot the liquid production over time for the 3 wells with the highest liquid production "
+
+    query="plot monthly aggregated water production. One trace per sector"
+
+    query = "How many wells split per well type and sector" 
+
     query = "Show in a table the 12 wells with the highest watercut at present"
+
+    query="show a bar chart of oil and water production over time" 
+
+    query = "plot the current volume fractions produced of water and and oil"
+
+   
     response = agent.run_with_deterministic_executor(query, run_presenter=False)
     execution_state = agent.execution_state
 

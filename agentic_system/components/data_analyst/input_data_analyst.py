@@ -438,7 +438,7 @@ class InputDataAnalyst:
         
         for raw in raw_results:
             text = getattr(raw, "text", None)
-            if text:
+            if isinstance(text, str) and text.strip():
 
                 data_results.append(
                                     TextResult(

@@ -311,7 +311,42 @@ Rules:
 - Do not produce headings.
 """
 
- 
+for_atext_source="""
+For a text source:
+- Use it when the source directly contains the requested textual answer.
+- The sub_instruction should describe the part of the instruction answered
+  by the text.
+- The source_id must be the exact text SOURCE ID.
+- Omit status messages that merely say data was calculated, a table was
+  created, or results are ready for plotting. Retain substantive answers,
+  findings, and explanations of missing or unavailable results.
+
+
+"""
+after_point9="""
+Distinguish preparation steps from presentation outputs:
+- Calculation, aggregation, filtering, sorting, and date-range requirements
+  describe how to prepare an output. They are not separate presentation
+  outputs unless the instruction explicitly requests them to be displayed
+  separately.
+- Keep preparation requirements together with the presentation they support.
+- An instruction to aggregate data and plot the result requests ONE output:
+  a plot of the aggregated data.
+- Do not create one item for preparing the data and another for plotting it.
+- A request to show a table AND plot the same data requests TWO outputs.
+
+Examples: 
+- "Calculate average daily temperature by week and plot its evolution."
+  Return one table-source item:
+  sub_instruction: "Plot weekly average daily temperature over time."
+- "Filter to active equipment, rank by downtime, and display the top ten."
+  Return one table-source item:
+  sub_instruction: "Display the ten active equipment units with the most downtime."
+- "Explain customer churn and chart the quarterly churn rate."
+  Return one text-source item for the explanation and one table-source item
+  for the chart, provided those sources are available.
+"""
+
 presenter_split_subinstructions_prompt = """
 You receive one instruction and a set of available sources.
 
@@ -330,12 +365,15 @@ Your job is to:
 9. Do not repeat the same source unless it is genuinely required for two
    different requested outputs.
 
+   
+
+
 For a text source:
 - Use it when the source directly contains the requested textual answer.
 - The sub_instruction should describe the part of the instruction answered
   by the text.
 - The source_id must be the exact text SOURCE ID.
-
+ 
 For a table source:
 - Use it when the table contains the information required for the requested
   table, chart, list, ranking, comparison, or numerical presentation.

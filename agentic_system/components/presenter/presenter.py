@@ -4,6 +4,7 @@ import json
 import textwrap
 from time import perf_counter
 #from yaml 
+import traceback
 import warnings as warnings_module
 import json
 import textwrap
@@ -774,8 +775,20 @@ class PresenterChartingTools:
 
         work = df.copy()
 
+        #if sort_order not in {"asc", "desc"}:
+        #    raise ValueError("sort_order must be 'asc' or 'desc'.")
+
+
+        sort_order = (
+            sort_order.strip().lower()
+            if isinstance(sort_order, str)
+            else "desc"
+        )
+
         if sort_order not in {"asc", "desc"}:
-            raise ValueError("sort_order must be 'asc' or 'desc'.")
+            sort_order = "desc"
+
+
 
         # Sort before selecting columns, allowing a hidden sort column.
         if sort_by:
@@ -797,6 +810,7 @@ class PresenterChartingTools:
 
             work = work.head(limit)
 
+        #work = work.round(2)
         return {
             "title": self.format_label(title) or "Table",
             "columns": [
@@ -1409,13 +1423,17 @@ class PresenterChartingTools:
         self._validate_columns(df, [labels, values])
 
         if not 0.0 <= hole <= 1.0:
-            raise ValueError("hole must be between 0 and 1")
+            hole = 0.0#raise ValueError("hole must be between 0 and 1")
 
         return {
             "data": [
                 {
                     "type": "pie",
-                    "labels": df[labels].astype(str).tolist(),
+                    #"labels": df[labels].astype(str).tolist(),
+                    "labels": [
+                        self.format_label(value)
+                        for value in df[labels]
+                    ],
                     "values": df[values].tolist(),
                     "hole": hole,
                 }
@@ -2058,8 +2076,18 @@ class SubInstruction(BaseModel):
         )
     )
 
-    kind: Literal["table", "text"] = Field(
-        description="Whether the source is a table or a text result."
+    #kind: Literal["table", "text"] = Field(
+    #    description="Whether the source is a table or a text result."
+    #)
+    kind: Literal["table", "text", "processing"] = Field(
+        description=(
+            "Whether the source is a table, a text result or a processing/calculation step. "
+            "'text': display a textual answer. "
+            "'table': display table data as a table or chart. "
+            "'processing': preparation only; ignored by the presenter. "
+            "A preparation step followed by a plot belongs in one 'table' item."
+            "Never classify an instruction requesting a visible output solely as 'processing'."
+        )
     )
 
     source_id: str = Field(
@@ -2143,8 +2171,9 @@ class PresenterComponent4:
         return PresenterResponse.model_validate(payload)
 
     
-
     def run(self, result_state: ExecutorState) -> PresenterResponse:
+         
+
         instruction = result_state.get("user_query", "") if isinstance(result_state, dict) else ""
         started = perf_counter()
         print(
@@ -2154,18 +2183,43 @@ class PresenterComponent4:
             "=========================",
             flush=True,
         )
- 
-        response = self.process_task_results(result_state)
-        response = self._normalize_response(response)
 
-        elapsed = perf_counter() - started
-        print(
-            "\n====== [RUN END] ======\n"
-            f"agent: {self.agent_name}\n"
-            f"elapsed: {elapsed:.2f}s\n"
-            "=======================",
-            flush=True,
-        )
+        try:
+            #raise RuntimeError("This is a hard-coded exception")
+
+            response = self.process_task_results(result_state)
+            response = self._normalize_response(response)
+
+        except Exception:
+            print("Presenter failed unexpectedly.", flush=True)
+            traceback.print_exc()
+
+            response = PresenterResponse(
+                items=[
+                    UIItem(
+                        id=f"error_{uuid4().hex[:8]}",
+                        type="error",
+                        title="Presentation unavailable",
+                        data={
+                            "text": (
+                                "The results could not be displayed "
+                                "because of an unexpected presentation error."
+                            ),
+                        },
+                    )
+                ]
+            )
+
+        finally:
+            elapsed = perf_counter() - started
+            print(
+                "\n====== [RUN END] ======\n"
+                f"agent: {self.agent_name}\n"
+                f"elapsed: {elapsed:.2f}s\n"
+                "=======================",
+                flush=True,
+            )
+
         return response
 
     def _make_clarification_item(
@@ -2176,10 +2230,50 @@ class PresenterComponent4:
             id=f"question_{uuid4().hex[:8]}",
             type="question",
             title="Additional information required",
-            data={"question": clarification_request},
+            data={"text": clarification_request},
         )
 
+
     def _make_text_item(
+        self,
+        data_result: TextResult,
+    ) -> UIItem:
+        try:
+            title = getattr(data_result, "title", None)
+            title = title.strip() if isinstance(title, str) else None
+
+            text = getattr(data_result, "text", None)
+
+            if not isinstance(text, str) or not text.strip():
+                raise ValueError(
+                    "Text result must contain a non-empty string."
+                )
+
+            return UIItem(
+                id=f"text_{uuid4().hex[:8]}",
+                type="text",
+                title=title or None,
+                data={"text": text},
+            )
+
+        except Exception:
+            import traceback
+
+            print("Presenter could not display a text result.")
+            traceback.print_exc()
+
+            return UIItem(
+                id=f"error_{uuid4().hex[:8]}",
+                type="error",
+                title="Text unavailable",
+                data={
+                    "text": (
+                        "A text result could not be displayed."
+                    ),
+                },
+            )
+
+    def _old__make_text_item(
         self,
         data_result: TextResult,
     ) -> UIItem:
@@ -2204,7 +2298,7 @@ class PresenterComponent4:
             type="error",
             title="Presentation error",
             data={
-                "message": f"No presenter for result from {task_result.agent}",
+                "text": f"No presenter for result from {task_result.agent}",
                 "details": (
                     str(type(data_result))
                     if data_result is not None
@@ -2244,7 +2338,7 @@ class PresenterComponent4:
                 source_map[source_id] = data_result
 
             elif isinstance(data_result, DataFrameResult):
-                source_id = data_result.table_name
+                source_id = f"{data_result.table_name}_{n}"
                 table_context = processor.extract_table_context(data_result)
 
                 context_parts.append(
@@ -2288,7 +2382,7 @@ class PresenterComponent4:
 
 
 
-    def process_single_task_result(
+    def old_process_single_task_result(
         self,
         task_result: TaskResult,
     ) -> list[UIItem]:
@@ -2298,8 +2392,16 @@ class PresenterComponent4:
         # Keep tables separately because they need presentation planning.
         table_results: list[DataFrameResult] = []
 
+
+        # a data result can be a text or a table, we need to process them differently
+        # when a table, the best representation could be a chart, a table or a text summary, 
+        # we need to ask the LLM what is the best representation. the user "intent" is in 
+        # the task_result.instruction, we need to provide the LLM with the context of 
+        # the table and the user intent, and ask what is the best representation for 
+        # this table given the user intent.
         for data_result in task_result.data_results:
 
+            # text results, equations, etc are simple. We just return text 
             if isinstance(data_result, TextResult):
                 # Display the complete text directly.
                 # No instruction splitting or additional LLM call is needed.
@@ -2307,6 +2409,7 @@ class PresenterComponent4:
                     self._make_text_item(data_result)
                 )
 
+            # store these to be processed later, after we have the context of the task and the user intent
             elif isinstance(data_result, DataFrameResult):
                 # Defer tables until we decide how to present them.
                 table_results.append(data_result)
@@ -2343,6 +2446,12 @@ class PresenterComponent4:
             context_text=context_text,
         )
 
+        print(
+                "Presenter source selections:",
+                sub_instructions.model_dump(),
+            )
+        
+
         for item in sub_instructions.items:
             # Retrieve the table selected by the LLM.
             source = source_map[item.source_id]
@@ -2364,18 +2473,40 @@ class PresenterComponent4:
         return ui_items
 
 
-    def old_process_single_task_result(
+    #def old_worked_well_process_single_task_result(    
+    def ok_process_single_task_result(
         self,
         task_result: TaskResult,
     ) -> list[UIItem]:
-        context_text, source_map = self.build_task_result_context(
-            task_result
-        )
+
+        # a task_result might come with multiple data_results, some of them are text, some of them are tables.
+        # for some reason, sometimes an explicative text arrives, we dont need it
+        # Example: TextResult(text='The monthly aggregated Voidage Replacement Ratio (VRR) has been calculated. The table includes the year, month, total water injection volume, total liquid production volume, and the calculated VRR.', role='answer', title=None)
+
+        
+        context_text, source_map = self.build_task_result_context(task_result)
+        print("Presenter source map:", source_map)
+        print("context_text:", context_text)
+        print()
+                
 
         sub_instructions = self.get_subinstructions(
             task_result=task_result,
             context_text=context_text,
         )
+        #SubInstruction(sub_instruction='Calculate the monthly aggregated Voidage Replacement Ratio (VRR) using the input data.', kind='table', source_id='monthly_aggregated_vrr')
+        #SubInstruction(sub_instruction='Plot the monthly aggregated Voidage Replacement Ratio (VRR) using the input data.', kind='table', source_id='monthly_aggregated_vrr')
+
+        print(
+                "Presenter source selections:",
+                sub_instructions.model_dump(),
+        )
+        # and then the issue is that the LLM generates two sub_instructions for the same table, and we end up with two UIItems for the same table, which is not what we want. We want to have only one UIItem per table, and if the LLM generates two sub_instructions for the same table, we will just take the first one and ignore the second one.
+        #Presenter source selections: {'items': [{'sub_instruction': 'Calculate the monthly aggregated Voidage Replacement Ratio 
+        # (VRR).', 'kind': 'table', 'source_id': 'monthly_aggregated_vrr'}, 
+        # {'sub_instruction': 'Plot the monthly aggregated Voidage Replacement Ratio (VRR).', 'kind': 'table', 
+        # 'source_id': 'monthly_aggregated_vrr'}]}
+
 
         ui_items: list[UIItem] = []
 
@@ -2383,7 +2514,10 @@ class PresenterComponent4:
         presented_text_sources: set[str] = set()
 
         for item in sub_instructions.items:
+
             source = source_map[item.source_id]
+            print(f"Processing source_id: {item.source_id}, kind: {item.kind}")
+
 
             if item.kind == "text":
 
@@ -2405,7 +2539,167 @@ class PresenterComponent4:
 
         return ui_items
 
+
+    def process_single_task_result(
+        self,
+        task_result: TaskResult,
+    ) -> list[UIItem]:
+        try:
+            context_text, source_map = self.build_task_result_context(
+                task_result
+            )
+
+            print("Presenter source map:", source_map)
+            print("context_text:", context_text)
+            print()
+
+            sub_instructions = self.get_subinstructions(
+                task_result=task_result,
+                context_text=context_text,
+            )
+
+            print(
+                "Presenter source selections:",
+                sub_instructions.model_dump(),
+            )
+
+            ui_items: list[UIItem] = []
+            presented_text_sources: set[str] = set()
+
+            for item in sub_instructions.items:
+                print(
+                    f"Processing source_id: {item.source_id}, "
+                    f"kind: {item.kind}"
+                )
+
+                # Processing-only instructions produce no UI item.
+                if item.kind == "processing":
+                    continue
+
+                source = source_map[item.source_id]
+
+                if item.kind == "text":
+                    # Display each selected text source only once.
+                    if item.source_id in presented_text_sources:
+                        continue
+
+                    ui_items.append(
+                        self._make_text_item(source)
+                    )
+                    presented_text_sources.add(item.source_id)
+
+                elif item.kind == "table":
+                    # Allow multiple requested views of the same table.
+                    ui_items.append(
+                        self._process_dataframe(
+                            source,
+                            item.sub_instruction,
+                        )
+                    )
+
+            # Empty or processing-only selections use the fallback.
+            if not ui_items and task_result.data_results:
+                raise ValueError(
+                    "Source selection produced no displayable items."
+                )
+
+            return ui_items
+
+        except Exception:
+            import traceback
+
+            print(
+                "Presenter failed for task:",
+                task_result.task_id,
+            )
+            traceback.print_exc()
+
+            # Replace partial output with the original artifacts.
+            ui_items: list[UIItem] = []
+
+            for data_result in task_result.data_results:
+                if isinstance(data_result, TextResult):
+                    ui_items.append(
+                        self._make_text_item(data_result)
+                    )
+
+                elif isinstance(data_result, DataFrameResult):
+                    ui_items.append(
+                        self._make_records_fallback(data_result)
+                    )
+
+            return ui_items
+
+
+
     def process_task_results(
+        self,
+        execution_state: ExecutorState,
+    ) -> PresenterResponse:
+        ui_items: list[UIItem] = []
+
+        clarification_request = execution_state.get(
+            "clarification_request"
+        )
+
+        if clarification_request:
+            ui_items.append(
+                self._make_clarification_item(
+                    clarification_request
+                )
+            )
+
+            return PresenterResponse(items=ui_items)
+
+        for task_result in execution_state.get("task_results", []):
+            try:
+                print(
+                    "Processing task result from agent:",
+                    task_result.task_id,
+                )
+
+                ui_task_items = self.process_single_task_result(
+                    task_result
+                )
+
+                ui_items.extend(ui_task_items)
+
+            except Exception:
+                import traceback
+
+                task_id = getattr(task_result, "task_id", None)
+                agent = getattr(task_result, "agent", None)
+                instruction = getattr(task_result, "instruction", None)
+
+                print(
+                    "Presenter could not display task:",
+                    task_id,
+                    "from agent:",
+                    agent,
+                )
+                traceback.print_exc()
+
+                text = "A task result could not be displayed."
+
+                if isinstance(instruction, str) and instruction.strip():
+                    text += f"\n\nTask: {instruction.strip()}"
+
+                ui_items.append(
+                    UIItem(
+                        id=f"error_{uuid4().hex[:8]}",
+                        type="error",
+                        title="Task presentation unavailable",
+                        data={"text": text},
+                        meta={
+                            "task_id": task_id,
+                            "agent": agent,
+                        },
+                    )
+                )
+
+        return PresenterResponse(items=ui_items)
+
+    def ok_process_task_results(
         self,
         execution_state: ExecutorState,
     ) -> PresenterResponse:
@@ -2438,6 +2732,169 @@ class PresenterComponent4:
 
         return PresenterResponse(items=ui_items)
 
+   
+    def works_well_but_too_complex_process_single_task_result(
+        self,
+        task_result: TaskResult,
+    ) -> list[UIItem]:
+        ui_items: list[UIItem] = []
+
+        # Keep the original supported artifacts for joint source selection
+        # and for fallback if selection fails.
+        supported_results: list[TextResult | DataFrameResult] = []
+
+        for data_result in task_result.data_results:
+            if isinstance(data_result, (TextResult, DataFrameResult)):
+                supported_results.append(data_result)
+            else:
+                ui_items.append(
+                    self._make_error_item(
+                        task_result,
+                        data_result,
+                    )
+                )
+
+        if not supported_results:
+            return ui_items
+
+        # Text-only tasks do not need source selection.
+        if all(
+            isinstance(result, TextResult)
+            for result in supported_results
+        ):
+            for data_result in supported_results:
+                ui_items.append(
+                    self._make_text_item(data_result)
+                )
+
+            return ui_items
+
+        try:
+            # Include both text and tables so the LLM can select relevant
+            # answer text and omit redundant table-status messages.
+            presentation_task = task_result.model_copy(
+                update={"data_results": supported_results}
+            )
+
+            # Detect collisions before building source_map.
+            # These IDs match build_task_result_context().
+            source_ids = [
+                f"text_{index}"
+                if isinstance(result, TextResult)
+                else result.table_name
+                for index, result in enumerate(supported_results)
+            ]
+
+            if len(source_ids) != len(set(source_ids)):
+                raise ValueError(
+                    "Presentation source IDs are not unique."
+                )
+
+            context_text, source_map = self.build_task_result_context(
+                presentation_task
+            )
+
+            sub_instructions = self.get_subinstructions(
+                task_result=presentation_task,
+                context_text=context_text,
+            )
+
+            print(
+                "Presenter source selections:",
+                sub_instructions.model_dump(),
+            )
+
+            if not sub_instructions.items:
+                raise ValueError(
+                    "Source selection returned no items."
+                )
+
+            selected_sources = []
+
+            # Validate the complete selection before rendering anything.
+            # A bad selection therefore cannot cause partial output
+            # followed by duplicate fallback items.
+            for item in sub_instructions.items:
+                if item.source_id not in source_map:
+                    raise ValueError(
+                        f"Unknown source ID: '{item.source_id}'."
+                    )
+
+                source = source_map[item.source_id]
+
+                if item.kind == "text":
+                    if not isinstance(source, TextResult):
+                        raise TypeError(
+                            f"Expected text source for "
+                            f"'{item.source_id}'."
+                        )
+
+                elif item.kind == "table":
+                    if not isinstance(source, DataFrameResult):
+                        raise TypeError(
+                            f"Expected dataframe source for "
+                            f"'{item.source_id}'."
+                        )
+
+                else:
+                    raise ValueError(
+                        f"Unsupported source kind: '{item.kind}'."
+                    )
+
+                selected_sources.append((item, source))
+
+        except Exception:
+            import traceback
+
+            print(
+                "Presenter source selection failed for task:",
+                task_result.task_id,
+            )
+            traceback.print_exc()
+
+            # Selection failed: preserve all original supported artifacts.
+            # Tables bypass planning and use the records fallback.
+            for data_result in supported_results:
+                if isinstance(data_result, TextResult):
+                    ui_items.append(
+                        self._make_text_item(data_result)
+                    )
+                else:
+                    ui_items.append(
+                        self._make_records_fallback(data_result)
+                    )
+
+            return ui_items
+
+        presented_text_sources: set[str] = set()
+
+        for item, source in selected_sources:
+            if item.kind == "text":
+                # The same text source may be selected more than once.
+                # Render it once and record that it has been displayed.
+                if item.source_id in presented_text_sources:
+                    continue
+
+                ui_items.append(
+                    self._make_text_item(source)
+                )
+                presented_text_sources.add(item.source_id)
+
+            else:
+                # Keep per-table protection for planning, preprocessing,
+                # plotting, and serialization failures.
+                ui_items.append(
+                    self._process_dataframe(
+                        source,
+                        item.sub_instruction,
+                    )
+                )
+
+        return ui_items
+
+
+
+   
     def _present_very_small_table(
         self,
         df: pd.DataFrame,
@@ -2543,7 +3000,7 @@ class PresenterComponent4:
     ) -> dict | None:
         work = df.copy()
 
-        print(df)
+        #print(df)
 
         preprocess_steps = plan.get("preprocess") or []
         plot = plan.get("plot")
@@ -2553,6 +3010,23 @@ class PresenterComponent4:
                 work,
                 preprocess_steps,
             )
+
+
+
+        # A valid preprocessing plan may produce no matching rows.
+        # Preserve that result instead of plotting or restoring original rows.
+        if work.empty:
+            plot_args = (plot or {}).get("args") or {}
+
+            return {
+                "_empty_processed_table": True,
+                "table_data": self.charting_tools.get_table_records(
+                    df=work,
+                    title=plot_args.get("title"),
+                ),
+            }
+
+
 
         if not plot:
             return None
@@ -2578,7 +3052,7 @@ class PresenterComponent4:
         return text[:1].upper() + text[1:]
 
 
-    def _process_dataframe(
+    def _process_dataframe_unchecked(
         self,
         data_result: DataFrameResult,
         instruction: str,
@@ -2609,7 +3083,7 @@ class PresenterComponent4:
 
 
         print("Processing dataframe result with shape:", df.shape)
-        print(df)
+        #print(df)
 
         if nrows <= -2 and ncols <= 2:
             print("It is a very small table")
@@ -2675,110 +3149,112 @@ class PresenterComponent4:
         )
     
 
-    def _old_process_dataframe(
+    def _make_records_fallback(
+        self,
+        data_result: DataFrameResult,
+    ) -> UIItem:
+        """Display the original records without planning or preprocessing."""
+        try:
+            title = self._format_label(data_result.table_name)
+
+            df = pd.DataFrame(
+                data_result.records,
+                columns=data_result.columns,
+            )
+
+            table_data = self.charting_tools.get_table_records(
+                df=df,
+                title=title,
+            )
+
+            item = self._make_table_records_item(
+                title,
+                table_data,
+                data_result.description,
+            )
+
+            item.meta.update({
+                "fallback": True,
+                "message": (
+                    "The requested presentation could not be generated. "
+                    "Showing the original table."
+                ),
+            })
+
+            payload = normalize_output_value(
+                item.model_dump(mode="python")
+            )
+            json.dumps(payload, allow_nan=False)
+
+            return UIItem.model_validate(payload)
+
+        except Exception:
+            import traceback
+
+            traceback.print_exc()
+
+            return UIItem(
+                id=f"error_{uuid4().hex[:8]}",
+                type="error",
+                title="Presentation unavailable",
+                data={
+                    "text": (
+                        "The requested presentation and its original "
+                        "table could not be displayed."
+                    ),
+                },
+            )
+
+    def _process_dataframe(
         self,
         data_result: DataFrameResult,
         instruction: str,
     ) -> UIItem:
-        df = pd.DataFrame( data_result.records, columns=data_result.columns ) # it musty arrive here as rows, records.
-        nrows, ncols = df.shape
-
-        print("Processing dataframe result with shape:", df.shape)
-        print( df )
-
-
-        if nrows <= -2 and ncols <= 2:
-        #if nrows <= 5 and ncols <= 5:
+        """Attempt normal presentation with an original-records fallback."""
+        try:
             
-            print("It is a very small table")
-            return self._present_very_small_table(
-                df,
-                data_result,
-                instruction,
+            # test the fallback 
+            #raise RuntimeError("TEST: forcing records-table fallback")
+            item = self._process_dataframe_unchecked(data_result,instruction)
+
+            if not isinstance(item, UIItem):
+                raise TypeError(
+                    "Dataframe presentation did not return a UIItem."
+                )
+
+            if item.type in {"chart", "table"}:
+                figure = item.data.get("plotly")
+
+                if not isinstance(figure, dict):
+                    raise TypeError(
+                        "Plotly output must be a dictionary."
+                    )
+
+                if not isinstance(figure.get("data"), list):
+                    raise ValueError(
+                        "Plotly output must contain a data list."
+                    )
+
+            payload = normalize_output_value(
+                item.model_dump(mode="python")
             )
+            json.dumps(payload, allow_nan=False)
 
-        processor = TableResponseProcessor()
+            return UIItem.model_validate(payload)
 
-        table_context = processor.extract_table_context(
-            data_result
-        )
+        except Exception:
+            
 
-        chart_plan = self._select_chart_plan(instruction,table_context)
-
-        chart_output = self._run_chart_plan(chart_plan,df)
-
-        plot = chart_plan.get("plot") or {}
-        tool_name = plot.get("tool")
-
-        use_records = (
-            tool_name == "plot_table"
-            and self.config.use_table_records
-        )
-
-        if use_records:
-            # Preserve preprocessing and all table arguments.
-            # Only redirect the output function.
-            chart_plan = {
-                **chart_plan,
-                "plot": {
-                    **plot,
-                    "tool": "get_table_records",
-                },
-            }
-
-        chart_output = self._run_chart_plan(
-            chart_plan,
-            df,
-        )
-
-        if use_records:
-            return self._make_table_records_item(
-                self._format_label(data_result.table_name),
-                chart_output,
-                data_result.description,
+            print(
+                "Presenter failed for table:",
+                data_result.table_name,
             )
+            traceback.print_exc()
 
-        # Original Plotly-table path.
-        if tool_name == "plot_table":
-            return self._make_table_item(
-                self._format_label(data_result.table_name),
-                chart_output,
-                data_result.description,
-            )
+            return self._make_records_fallback(data_result)
 
-        return self._make_chart_item(
-            self._format_label(data_result.table_name),
-            chart_output,
-            data_result.description,
-        )
-
-    
-        """
-        plot = chart_plan.get("plot") or {}
-        tool_name = plot.get("tool")
-
-
-        if tool_name == "plot_table":
-            return self._make_table_item(
-                self._format_label(data_result.table_name),
-                chart_output,
-                data_result.description,
-            )
-
-        return self._make_chart_item(
-            self._format_label(data_result.table_name),
-            chart_output,
-            data_result.description,
-        )
-
-
-        return self._make_chart_item(
-            self._format_label(data_result.table_name),
-            chart_output,
-            data_result.description,
-        )
-        """
-    
+        
+ 
     def _strip_markdown_json(
         self,
         text: str,
@@ -2799,31 +3275,6 @@ class PresenterComponent4:
 
         return text.strip()
 
-    def old_non_strict__select_chart_plan(
-        self,
-        user_query: str,
-        table_context: str,
-    ) -> dict:
-        messages = [
-            SystemMessage(content=self.config.prompt),
-            HumanMessage(
-                content=(
-                    f"USER QUERY\n"
-                    f"{user_query}\n\n"
-                    f"TABLE\n"
-                    f"{table_context}"
-                )
-            ),
-        ]
-
-        response = self.llm.invoke(messages)
-
-        text = self._strip_markdown_json(
-            response.content
-        )
-
-        return json.loads(text)
-    
 
     def _select_chart_plan(
         self,

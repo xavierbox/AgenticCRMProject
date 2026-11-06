@@ -164,8 +164,8 @@ class AgentTableResponse(BaseModel):
         description="Sanitized user query.",
     )
 
-    text: str = Field(
-        default="",
+    text: Optional[str] = Field(
+        default=None,
         description=(
             "Direct textual answer to the user's question. "
             "Do not repeat table descriptions here. "
